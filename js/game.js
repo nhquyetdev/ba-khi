@@ -147,7 +147,7 @@
     $('capMsg').textContent = T('capReached');
     const tg = scene === 'world' ? nearTarget() : null;
     $('gateBtn').style.display = tg ? 'block' : 'none';
-    if (tg) { const lbl = tg.kind === 'boss' ? '獄 ' + T('gateHint') : tg.kind === 'mirror' ? `🪞 ${T('enterMirror')} · ${T('mirrorChance').replace('{p}', Math.round(MIRROR_WIN_CHANCE*100))}` : tg.kind === 'roam' ? `☠ ${T('challengeRoam')} · ${S.lang === 'vi' ? tg.r.B.vi : tg.r.B.en}` : `⛩ ${T('enterRift')} · ${RIFT_RANKS[RIFTS[tg.i][2]][S.lang]}`; if ($('gateBtn').textContent !== lbl) $('gateBtn').textContent = lbl;
+    if (tg) { const lbl = tg.kind === 'boss' ? '獄 ' + T('gateHint') : tg.kind === 'mirror' ? `🪞 ${T('enterMirror')} · ${T('mirrorChance').replace('{p}', Math.round(mirrorChance(S)*100))}` : tg.kind === 'roam' ? `☠ ${T('challengeRoam')} · ${S.lang === 'vi' ? tg.r.B.vi : tg.r.B.en}` : `⛩ ${T('enterRift')} · ${RIFT_RANKS[RIFTS[tg.i][2]][S.lang]}`; if ($('gateBtn').textContent !== lbl) $('gateBtn').textContent = lbl;
       $('gateBtn').style.borderColor = tg.kind === 'boss' || tg.kind === 'mirror' ? '#ff5060' : tg.kind === 'roam' ? '#b060ff' : RIFT_RANKS[RIFTS[tg.i][2]].c; }
   }
 
@@ -224,8 +224,8 @@
       h += '</div></div>';
     }
     if (S.best > MAX_TITLE) h += `<div class="cTier"><b>∞ ${esc(TIERS[UNL][S.lang])}</b><div class="cGrid">${Array.from({ length: S.best - MAX_TITLE }, (_, i) => `<div class="cItem rainbow">${esc(tn(MAX_TITLE + i + 1))}</div>`).join('')}</div></div>`;
-    h += `</div><div class="row"><button class="btn" data-close>${T('close')}</button></div>`;
-    modal(h);
+    h += `</div><div class="row">${S.ended ? `<button class="btn gold" id="replayEnd">🎬 ${T('replayEnding')}</button>` : ''}<button class="btn" data-close>${T('close')}</button></div>`;
+    modal(h); if (S.ended) $('replayEnd').onclick = () => { closeModal(); playEnding(); };
   };
 
   $('btnRebirth').onclick = () => {
@@ -266,10 +266,13 @@
     let h = `<h2>🎭 ${T('wardrobe')}</h2><canvas id="prevCv" width="220" height="210"></canvas>
       <div class="tabs wtabs">${Object.keys(COS).map(k => `<button data-wt="${k}" class="${k === wTab ? 'on' : ''}">${T(COS[k][2])}</button>`).join('')}</div><div class="wGrid">`;
     for (const it of list) { const ok = reqMet(S, it.req), on = S[key] === it.id; const [c, v] = reqProgress(S, it.req);
-      h += `<button class="wItem${on ? ' on' : ''}${ok ? '' : ' lockedW'}" data-id="${it.id}" ${ok ? '' : 'disabled'}><b>${ok ? '' : '🔒 '}${esc(it[S.lang])}</b>
-        <small>${on ? '✔ ' + T('equipped') : ok ? T('equip') : esc(reqText(it.req, S.lang)) + (it.req[0] !== 'best' ? ` (${Math.min(c, v) >= 1000 ? Math.floor(Math.min(c, v)/1000) + 'K' : Math.floor(Math.min(c, v))}/${v >= 1000 ? v/1000 + 'K' : v})` : '')}</small></button>`; }
-    h += `</div><div class="row"><button class="btn" data-close>${T('close')}</button></div>`;
-    modal(h); previewChar(S.t, S.sk, S.as);
+      // v1.7 no spoilers: title-locked items beyond your current realm and the final-boss reward show as ???
+      const k0 = it.req[0], hide = !ok && (k0 === 'finalWins' || (k0 === 'best' && tierOf(it.req[1]) > tierOf(S.best)));
+      const nm = hide ? '???' : it[S.lang], rq = k0 === 'best' ? T('reachHidden') : k0 === 'finalWins' ? T('defeatHidden') : reqText(it.req, S.lang);
+      h += `<button class="wItem${on ? ' on' : ''}${ok ? '' : ' lockedW'}${hide ? ' spoil' : ''}" data-id="${it.id}" ${ok ? '' : 'disabled'}><b>${ok ? '' : '🔒 '}${esc(nm)}</b>
+        <small>${on ? '✔ ' + T('equipped') : ok ? T('equip') : esc(rq) + (k0 !== 'best' && k0 !== 'finalWins' ? ` (${Math.min(c, v) >= 1000 ? Math.floor(Math.min(c, v)/1000) + 'K' : Math.floor(Math.min(c, v))}/${v >= 1000 ? v/1000 + 'K' : v})` : '')}</small></button>`; }
+    h += `</div><div class="row">${S.ended ? `<button class="btn gold" id="replayEnd">🎬 ${T('replayEnding')}</button>` : ''}<button class="btn" data-close>${T('close')}</button></div>`;
+    modal(h); if (S.ended) $('replayEnd').onclick = () => { closeModal(); playEnding(); }; previewChar(S.t, S.sk, S.as);
     document.querySelectorAll('[data-wt]').forEach(b => b.onclick = () => { wTab = b.dataset.wt; openWardrobe(); });
     document.querySelectorAll('.wItem:not([disabled])').forEach(b => b.onclick = () => { S[key] = b.dataset.id; save(); Net.sendMe(meNet(), true); pushLB(); openWardrobe(); });
   }
@@ -277,14 +280,24 @@
   function unlockTick(){
     if (scene === 'lobby' || Date.now() - unlockT < 2500) return; unlockT = Date.now(); S.unlocks = S.unlocks || [];
     if (!S.unlocks.length) { for (const k in COS) for (const it of COS[k][0]) if (reqMet(S, it.req)) S.unlocks.push(k + ':' + it.id); save(); return; } // first run: no spam
-    for (const k in COS) for (const it of COS[k][0]) { const id = k + ':' + it.id; if (!S.unlocks.includes(id) && reqMet(S, it.req)) { S.unlocks.push(id); save(); sfx.find();
-      toast(`🎁 ${esc(T('unlockedNew').replace('{n}', it[S.lang]))} <small>(${T(COS[k][2])})</small>`, 5000); } }
+    if (scene !== 'world') return; // don't cover fights / endings
+    const fresh = []; for (const k in COS) for (const it of COS[k][0]) { const id = k + ':' + it.id; if (!S.unlocks.includes(id) && reqMet(S, it.req)) { S.unlocks.push(id); fresh.push([k, it]); } }
+    if (!fresh.length) return; save(); sfx.find();
+    if (fresh.length <= 3) fresh.forEach(([k, it]) => toast(`🎁 ${esc(T('unlockedNew').replace('{n}', it[S.lang]))} <small>(${T(COS[k][2])})</small>`, 5000));
+    else toast(`🎁 ${esc(T('unlockedNew').replace('{n}', fresh.slice(0, 3).map(([, it]) => it[S.lang]).join(', ') + ` +${fresh.length - 3}`))} <small>(🎭 ${T('wardrobe')})</small>`, 6000);
   }
   $('btnSupport').onclick = () => modal(`<h2>💖 ${T('support')}</h2><div class="row col">
     <a class="btn gold" href="https://ko-fi.com/lichstream" target="_blank" rel="noopener">☕ Ko-fi — LichStream</a>
     <a class="btn red" href="https://www.youtube.com/@LichStream" target="_blank" rel="noopener">▶ YouTube — @LichStream</a></div>
     <div class="row"><button class="btn" data-close>${T('close')}</button></div>`);
 
+  // ---------------- v1.6 Ending ----------------
+  function playEnding(done){
+    const el = $('ending'); const lines = ENDING[S.lang] || ENDING.en; el.innerHTML = lines.map((l, i) => `<p style="animation-delay:${0.6 + i*2.2}s" class="${i === lines.length - 1 ? 'last' : ''}">${esc(l)}</p>`).join('') + `<button class="btn" id="endSkip">${T('skip')} ›</button>`;
+    el.style.display = 'flex'; sfx.rebirth(); let closed = false;
+    const close = () => { if (closed) return; closed = true; el.style.display = 'none'; el.innerHTML = ''; if (done) done(); };
+    $('endSkip').onclick = close; setTimeout(close, (lines.length*2.2 + 3.5)*1000);
+  }
   // ---------------- Banner / flash ----------------
   let flashA = 0, flashC = '#fff';
   function flash(c, a){ flashC = c; flashA = a; }
@@ -349,14 +362,14 @@
   }
   function startMirror(){
     const p = myStats(); const st = { hp: p.hp*MIRROR_MULT, atk: p.atk*MIRROR_MULT, def: p.def*MIRROR_MULT, crit: p.crit };
-    beginBossFight({ kind: 'mirror', g: S.t, B: MIRROR_BOSS, st, form: 0, jump: 0, script: Math.random() < MIRROR_WIN_CHANCE });
+    beginBossFight({ kind: 'mirror', g: S.t, B: MIRROR_BOSS, st, form: 0, jump: 0, script: Math.random() < mirrorChance(S) });
   }
   function beginBossFight(o){
     const { g, B, st } = o;
     const hue = (B.hue + posOf(g)*6) % 360;
-    fight = { kind: o.kind, riftI: o.i, g, B, rng: Math.random, hue, form: o.form, jump: o.jump, aBoost: 0, transformed: o.kind === 'mirror', script: o.script,
+    fight = { kind: o.kind, riftI: o.i, g, B, rng: Math.random, hue, form: o.form, jump: o.jump, aBoost: 0, transformed: o.kind === 'mirror' || B.id === 'finalmirror', script: o.script, memPhase: -1,
       L: { name: S.name, t: S.t, st: myStats(), hp: 0, fx: {}, hurt: 0, atk: 0, sk: S.sk, as: S.as },
-      Rt: { name: o.kind === 'mirror' ? (S.lang === 'vi' ? B.vi : B.en) : bossName(B, o.form), st, hp: 0, hurt: 0, atk: 0, fx: {} },
+      Rt: { name: o.kind === 'mirror' || B.id === 'finalmirror' ? (S.lang === 'vi' ? B.vi : B.en) : bossName(B, o.form), st, hp: 0, hurt: 0, atk: 0, fx: {} },
       phase: 'intro', timer: 0, round: 0, beams: [], nums: [], intro: B.intro[S.lang], result: null };
     fight.L.hp = fight.L.st.hp; fight.Rt.hp = st.hp;
     scene = 'fight'; $('hud').classList.add('dim'); $('fightUI').style.display = 'block'; sfx.beat();
@@ -402,7 +415,9 @@
   }
   function finishFight(){
     const f = fight; fight = null; scene = 'world'; $('hud').classList.remove('dim'); $('fightUI').style.display = 'none';
-    if (f.kind === 'boss') { me.x = GATE.x; me.y = GATE.y + 200; if (f.result) { S.stats.bossWins = (S.stats.bossWins || 0) + 1; titleUp(true); } }
+    if (f.kind === 'boss') { me.x = GATE.x; me.y = GATE.y + 200; if (f.result) { S.stats.bossWins = (S.stats.bossWins || 0) + 1;
+      if (f.B.id === 'finalmirror') { S.stats.finalWins = (S.stats.finalWins || 0) + 1; const first = !S.ended; S.ended = true; save(); if (first) { playEnding(() => titleUp(true)); return; } }
+      titleUp(true); } }
     else if (f.kind === 'mirror') { me.x = MIRROR_GATE.x; me.y = MIRROR_GATE.y + 150; S.mirrorCD = Date.now() + (f.result ? MIRROR_CD_WIN : MIRROR_CD_LOSE);
       if (f.result) { S.stats.mirrorWins = (S.stats.mirrorWins || 0) + 1; const got = (S.shards||0) < MAX_SHARDS; if (got) S.shards = (S.shards||0) + 1; toast('🪞 ' + (got ? T('mirrorWin') : T('mirrorWinMax')), 5000); pushLB(); }
       save(); }
@@ -530,7 +545,7 @@
         ctx.fillText(`☠ ${S.lang === 'vi' ? r.B.vi : r.B.en}`, sx, sy - sz*1.25 - 8); ctx.shadowBlur = 0; } }); } }
     mirrorCh.t = S.t; mirrorCh.sk = S.sk; mirrorCh.as = S.as;
     if (vis(MIRROR_GATE.x, MIRROR_GATE.y, 300)) list.push({ y: MIRROR_GATE.y, f: () => { const [sx, sy] = w2s(MIRROR_GATE.x, MIRROR_GATE.y); const rd = Date.now() >= (S.mirrorCD || 0);
-      R.mirrorGate(ctx, sx, sy, cam.z, time, rd, `🪞 ${T('mirrorGate')}`, rd ? T('mirrorChance').replace('{p}', Math.round(MIRROR_WIN_CHANCE*100)) : T('mirrorCD').replace('{t}', mmss(S.mirrorCD - Date.now())), mirrorCh); } });
+      R.mirrorGate(ctx, sx, sy, cam.z, time, rd, `🪞 ${T('mirrorGate')}`, rd ? T('mirrorChance').replace('{p}', Math.round(mirrorChance(S)*100)) : T('mirrorCD').replace('{t}', mmss(S.mirrorCD - Date.now())), mirrorCh); } });
     const evw = eventAt(Date.now()); if (evw.active && vis(evw.x, evw.y, 500)) list.push({ y: evw.y, f: () => { const [sx, sy] = w2s(evw.x, evw.y); R.eventGate(ctx, sx, sy, cam.z, time, evw, evw.type[S.lang], S.buffEv === evw.idx); } });
     if (vis(GATE.x, GATE.y, 500)) list.push({ y: GATE.y, f: () => { const [sx, sy] = w2s(GATE.x, GATE.y); R.gate(ctx, sx, sy, cam.z, time, capped()); } });
     for (const id in others) { const o = others[id]; if (!vis(o.x, o.y)) continue; list.push({ y: o.y, f: () => { const [sx, sy] = w2s(o.x, o.y); R.character(ctx, sx, sy, cam.z*1.25, o, time); nameTag(sx, sy, o.n, o.t, false, o.nk); } }); }
@@ -598,6 +613,14 @@
       const flicker = Math.random() < 0.03 ? 0.2 : 1;
       ctx.globalAlpha = f.phase === 'intro' ? Math.min(1, f.timer/2.5) * flicker : (f.phase === 'end' && f.result === true ? Math.max(0, 1 - f.timer/1.8) : flicker);
       f.aBoost = Math.max(0, f.aBoost - dt*0.5);
+      if (f.B.id === 'finalmirror') { // v1.6: the reflection replays every realm you walked through, one per 10% HP lost
+        const ph = Math.max(0, Math.min(9, Math.floor((1 - Math.max(0, f.Rt.hp)/f.Rt.st.hp)*10))), ti = Math.round(ph*UNL/9);
+        const tShow = ti >= UNL ? MAX_TITLE + 1 : realmStart(ti) + realmSize(ti) - 1;
+        if (ph !== f.memPhase) { f.memPhase = ph; f.Rt.fx = {}; f.memT = 2.2; f.memName = TIERS[ti][S.lang]; if (ph > 0) { flash(titleColor(tShow), 0.6); sfx.transform(); } }
+        R.character(ctx, rx + lunge*0.5, floorY, sc*1.45, { t: tShow, sk: S.sk, as: 'realm', face: -1, fx: f.Rt.fx, mirror: true, seed: 7, moving: false }, time);
+        if (f.memT > 0) { f.memT -= dt; ctx.save(); ctx.globalAlpha = Math.min(1, f.memT); ctx.textAlign = 'center'; ctx.font = `800 ${Math.max(16, 22*sc)}px ${FONT}`; ctx.fillStyle = titleColor(tShow); ctx.shadowColor = '#000'; ctx.shadowBlur = 8;
+          ctx.fillText('🪞 ' + T('memory').replace('{r}', f.memName), rx, floorY - 290*sc); ctx.restore(); }
+      } else
       if (f.kind === 'mirror') { R.character(ctx, rx + lunge*0.5, floorY, sc*1.3, { t: S.t, sk: S.sk, as: S.as, face: -1, fx: f.Rt.fx, mirror: true, seed: 7, moving: false }, time); } else {
       ctx.save(); ctx.globalAlpha *= 1; R.bossAura(ctx, rx + lunge, floorY, S_, time, f.form, f.aBoost); ctx.restore();
       R.boss(ctx, f.B.id, rx + lunge, floorY, S_, time, { hue: f.hue, hurt: f.Rt.hurt, atk: f.Rt.atk, g: f.g, target: [lx - rx, -S_*0.3], fx: f.Rt.fx }); }
@@ -635,7 +658,7 @@
     // bars
     const bar = (x, y, w, hp, max, name, t, isBoss) => { ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(x, y, w, 14); ctx.fillStyle = isBoss ? '#a00' : '#3c3'; ctx.fillRect(x, y, w*Math.max(0, hp/max), 14);
       ctx.strokeStyle = '#000'; ctx.strokeRect(x, y, w, 14); ctx.fillStyle = '#fff'; ctx.font = `bold 13px ${FONT}`; ctx.textAlign = 'left'; ctx.fillText(name, x, y - 6);
-      ctx.textAlign = 'right'; ctx.font = `11px ${FONT}`; ctx.fillStyle = isBoss ? '#f88' : titleColor(t); ctx.fillText(isBoss ? (f.kind === 'rift' ? '⛩ ' + RIFT_RANKS[RIFTS[f.riftI][2]][S.lang] : f.kind === 'roam' ? '☠ ' + T('roamName') : f.kind === 'mirror' ? '🪞 ' + T('mirrorChance').replace('{p}', Math.round(MIRROR_WIN_CHANCE*100)) : '') : tn(t), x + w, y - 6); ctx.fillStyle = '#ddd'; ctx.fillText(`${fmt(Math.max(0, hp))} / ${fmt(max)}`, x + w, y + 28); };
+      ctx.textAlign = 'right'; ctx.font = `11px ${FONT}`; ctx.fillStyle = isBoss ? '#f88' : titleColor(t); ctx.fillText(isBoss ? (f.kind === 'rift' ? '⛩ ' + RIFT_RANKS[RIFTS[f.riftI][2]][S.lang] : f.kind === 'roam' ? '☠ ' + T('roamName') : f.kind === 'mirror' ? '🪞 ' + T('mirrorChance').replace('{p}', Math.round(mirrorChance(S)*100)) : '') : tn(t), x + w, y - 6); ctx.fillStyle = '#ddd'; ctx.fillText(`${fmt(Math.max(0, hp))} / ${fmt(max)}`, x + w, y + 28); };
     const bw = Math.min(320, W*0.4);
     bar(16, 40, bw, f.L.hp, f.L.st.hp, f.L.name, f.L.t, false);
     bar(W - bw - 16, 40, bw, f.Rt.hp, f.Rt.st.hp, f.Rt.name, f.Rt.t, boss);

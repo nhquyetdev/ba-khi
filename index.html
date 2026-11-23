@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>GodK Bá Khí v1.5</title>
+<title>GodK Bá Khí v1.7</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,600&display=swap&subset=vietnamese" rel="stylesheet">
 <style>
@@ -90,6 +90,12 @@
   .wItem b{font-size:13px}.wItem small{font-size:11px;color:#aaa}
   .wItem.on{border-color:#ffd35a;box-shadow:0 0 8px rgba(255,210,80,.4)}
   .wItem.lockedW{opacity:.55;cursor:default}
+  .wItem.spoil b{filter:blur(.6px);letter-spacing:3px;color:#9a8fb8}
+  #ending{position:fixed;inset:0;z-index:20;background:radial-gradient(circle at 50% 45%,#1a1424 0%,#000 70%);flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px}
+  #ending p{font-size:clamp(16px,2.6vw,26px);color:#e8e0f0;opacity:0;animation:endIn 1.6s ease-out forwards;text-shadow:0 0 12px rgba(200,180,255,.6);font-style:italic}
+  #ending p.last{font-size:clamp(34px,7vw,72px);font-weight:900;font-style:normal;background:linear-gradient(90deg,#f55,#fa3,#ff5,#5f7,#5cf,#a6f,#f5c);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.3}
+  #ending .btn{position:absolute;bottom:20px;right:20px}
+  @keyframes endIn{from{opacity:0;transform:translateY(12px);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
   #fightUI{display:none;position:fixed;inset:0;z-index:4;pointer-events:none}
   #modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:9}
   #modalBody{background:#0f0c17;border:1px solid #4a4060;border-radius:14px;padding:18px;width:min(480px,94vw);max-height:88vh;overflow:auto;text-align:center}
@@ -116,7 +122,7 @@
 <canvas id="cv"></canvas>
 
 <div id="lobby">
-  <div class="logo">GodK Bá Khí<small>v1.5 · 霸氣</small></div>
+  <div class="logo">GodK Bá Khí<small>v1.7 · 霸氣</small></div>
   <div class="tag" data-t="tagline"></div>
   <div class="card">
     <input id="nameIn" maxlength="16" data-ph="yourName">
@@ -168,6 +174,7 @@
 <div id="toasts"></div>
 <div id="joy"><div id="joyKnob"></div></div>
 <div id="pvpCard" style="display:none"></div>
+<div id="ending" style="display:none"></div>
 <div id="modal"><div id="modalBody"></div></div>
 
 <script src="config.js"></script>

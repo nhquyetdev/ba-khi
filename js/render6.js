@@ -120,3 +120,21 @@
       ctx.restore(); }
   };
 })();
+
+// v1.6 — "Shattered Mirror" aura: glass shards orbiting and reflecting light
+(() => {
+  const TAU = Math.PI*2, base = R.auraExtra;
+  R.auraExtra = (ctx, A, cx, cy, w, h, sc, time, hue, back, fx, fy) => {
+    base(ctx, A, cx, cy, w, h, sc, time, hue, back, fx, fy);
+    if (!A.glass) return;
+    ctx.save();
+    for (let i = 0; i < 14; i++) { const a = time*(0.5 + (i%3)*0.15) + i*TAU/14, depth = Math.sin(a); if ((depth < 0) !== back) continue;
+      const r = w*(1.3 + (i%4)*0.18), px = cx + Math.cos(a)*r, py = cy - h*0.15 + depth*r*0.35 + Math.sin(time*2 + i)*4*sc, s = (5 + (i%3)*2)*sc*(back ? 0.8 : 1.1);
+      ctx.save(); ctx.translate(px, py); ctx.rotate(time*1.5 + i);
+      const g = ctx.createLinearGradient(-s, -s, s, s); g.addColorStop(0, 'rgba(220,240,255,0.9)'); g.addColorStop(0.5, `hsla(${(i*25 + time*60)%360},80%,70%,0.6)`); g.addColorStop(1, 'rgba(120,150,180,0.8)');
+      ctx.fillStyle = g; ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 0.8*sc; ctx.beginPath(); ctx.moveTo(0, -s*1.3); ctx.lineTo(s*0.8, s*0.4); ctx.lineTo(-s*0.6, s*0.9); ctx.closePath(); ctx.fill(); ctx.stroke();
+      if (Math.sin(time*4 + i*1.7) > 0.92) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(0, 0, s*1.4, 0, TAU); ctx.fill(); } // glint
+      ctx.restore(); }
+    ctx.restore();
+  };
+})();

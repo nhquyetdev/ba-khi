@@ -1,6 +1,6 @@
 // GodK Bá Khí v1.0 — data: titles, tiers, bosses, i18n, formulas
 'use strict';
-const GAME_VERSION = '1.5';
+const GAME_VERSION = '1.7';
 const FONT = "'Be Vietnam Pro', 'Segoe UI', Roboto, Arial, sans-serif";
 const SAVE_KEY = 'godk_ba_khi_save_v1';
 
@@ -128,7 +128,7 @@ const F = {
   xpRate: (s, moving, inWell, buff) => (1 + s.R) * (1 + 0.08 * s.L) * (moving ? 2 : 1) * (inWell ? 1.5 : 1) * (1 + 0.05 * (s.stelae ? s.stelae.length : 0)) * (1 + 0.01 * (s.marks || 0)) * (buff ? 5 : 1),
   statMult: (t, E, M, Sh) => (1 + 0.035 * E) * Math.pow(1.01, t) * (1 + 0.005 * (M || 0)) * (1 + 0.03 * (Sh || 0)),
   stats(L, t, E, M, Sh){ const m = F.statMult(t, E, M, Sh); return { hp: (120 + 30*L)*m, atk: (12 + 3.2*L)*m, def: (3 + 0.7*L)*m, crit: 0.10 + Math.min(0.15, E*0.0005) }; },
-  boss(g){ const L = LV_PER_TITLE*g; const b = F.stats(L, g, 0); const D = 0.85*Math.pow(1.017, g)*(isRealmEnd(g) ? 1.5 : 1)*(g > 250 ? 1.15 : 1); // v1.5: 300 titles (~21h active, ~9 rebirths)
+  boss(g){ const L = LV_PER_TITLE*g; const b = F.stats(L, g, 0); const D = 0.85*Math.pow(1.017, g)*(isRealmEnd(g) ? 1.5 : 1)*(g > 250 ? 1.15 : 1)*(g === MAX_TITLE - 1 ? 1.5 : 1); // v1.5 (+v1.6 final gate ×1.5): 300 titles (~21h active, ~9 rebirths)
     return { hp: b.hp*D*1.6, atk: b.atk*D*0.7, def: b.def*D, crit: 0.08 }; },
   essence: t => Math.floor(Math.pow(t, 1.5) / 5), // v1.5: /5 → more rebirths
   dmg: (a, d) => a*a/(a+d),
@@ -216,7 +216,15 @@ const HIGH_BOSSES = [
 ];
 // v1.5 — the Mirror Gate: a copy of YOU, slightly stronger. Winning is pure luck (20%).
 const MIRROR_BOSS = { id:'mirrorself', en:'Your Reflection', vi:'Bóng Gương Của Ngươi', hue: 350, intro:{en:['It knows every move you will make.','It is you. Slightly better. Only luck can save you.'],vi:['Nó biết trước mọi đòn ngươi sẽ ra.','Nó chính là ngươi, chỉ nhỉnh hơn một chút. Chỉ may mắn mới cứu được ngươi.']}};
-const MIRROR_GATE = { x: -650, y: 1150 }, MIRROR_WIN_CHANCE = 0.2, MIRROR_MULT = 1.03, MIRROR_CD_WIN = 10*60*1000, MIRROR_CD_LOSE = 2*60*1000, MAX_SHARDS = 10;
+// v1.6: harder — 12% base, −0.8% per Mirror Shard you own (it copies them too), min 4%; reflection ×1.05; longer cooldowns
+const MIRROR_GATE = { x: -650, y: 1150 }, MIRROR_MULT = 1.05, MIRROR_CD_WIN = 15*60*1000, MIRROR_CD_LOSE = 3*60*1000, MAX_SHARDS = 10;
+const mirrorChance = S => Math.max(0.04, 0.12 - 0.008*(S.shards || 0));
+// v1.6 FINAL BOSS (gate 299 → GODK): your last reflection; replays every realm you walked through as it loses HP. Pure stat check (no luck).
+const FINAL_MIRROR = { id:'finalmirror', en:'The Last Reflection', vi:'Bóng Gương Tối Hậu', hue: 0, intro:{en:['Three hundred titles. One mirror.','It remembers every step you took.'],vi:['Ba trăm danh hiệu. Một tấm gương.','Nó nhớ từng bước ngươi đã đi.']}};
+const ENDING = {
+  en:['The mirror shatters into three hundred pieces.','Each piece is a title you once carried.','Faint. Emperor. God. Cosmos. Infinity. Paradox.','You did not defeat it.','You became it.','— GODK —'],
+  vi:['Tấm gương vỡ thành ba trăm mảnh.','Mỗi mảnh là một danh hiệu ngươi từng mang.','Mờ Nhạt. Hoàng Đế. Thần. Càn Khôn. Vô Hạn. Nghịch Lý.','Ngươi không đánh bại nó.','Ngươi đã trở thành nó.','— GODK —'],
+};
 const ALL_BOSSES = BOSSES.concat(EXTRA_BOSSES, UNLIMITED_BOSSES, HIGH_BOSSES);
 // Goku-style forms: aura color + name suffix; bosses transform at 50% HP
 const BOSS_FORMS = [
@@ -239,7 +247,8 @@ function bossFor(g){
   if (g >= MAX_TITLE) { const pool = [BOSSES[10]].concat(UNLIMITED_BOSSES, HIGH_BOSSES); return (g % 5 === 4) ? ALL_BOSSES[(g*7) % ALL_BOSSES.length] : pool[g % pool.length]; }
   const ti = tierOf(g);
   if (ti >= 10) { // v1.4 realms 201–250
-    if (g === MAX_TITLE - 1) return HIGH_BOSSES[2];
+    if (g === MAX_TITLE - 1) return FINAL_MIRROR;
+    if (g === MAX_TITLE - 2) return HIGH_BOSSES[2];
     if (isRealmEnd(g)) return HIGH_BOSSES[ti - 10];
     const pool = [HIGH_BOSSES[ti - 10]].concat(UNLIMITED_BOSSES, EXTRA_BOSSES.filter(b => ['hydra','puppeteer','sphinx','reaper','bonedragon'].includes(b.id)), [BOSSES[9], BOSSES[10]]);
     return pool[(g*5) % pool.length];
@@ -335,7 +344,9 @@ const I18N = {
     wardrobe:'Wardrobe', tabAura:'Auras', tabNick:'Nicknames', tabSkin:'Skins', equipped:'Equipped', equip:'Equip', locked:'Locked', unlockedNew:'Unlocked: {n}!', nickname:'Nickname', skin:'Skin', auraStyle:'Aura',
     pvpCooldown:'Duel requests on cooldown: {t}', pvpSeen:'{n} received your challenge…', pvpTimeout:'No answer. You can challenge again in 1 minute.', pvpDeclinedCD:'Duel declined. You can challenge again in 1 minute.', pvpBusy:'They are busy fighting — the request will wait.',
     gateSkip:'Conquered gate — passed automatically', speed:'Speed',
-    mirrorGate:'Mirror Gate', enterMirror:'Face your Reflection', mirrorChance:'Win chance: {p}%', mirrorWin:'You defeated yourself! +1 Mirror Shard (+3% all stats)', mirrorWinMax:'You defeated yourself again! (Shards maxed)', mirrorLose:'Your Reflection won. The mirror will open again in 2 minutes.', shards:'Mirror Shards', mirrorCD:'The mirror is clouded ({t})',
+    reachHidden:'Reach title ???', defeatHidden:'Defeat ???',
+    memory:'Memory: {r}', replayEnding:'Watch the ending again', skip:'Skip',
+    mirrorGate:'Mirror Gate', enterMirror:'Face your Reflection', mirrorChance:'Win chance: {p}%', mirrorWin:'You defeated yourself! +1 Mirror Shard (+3% all stats)', mirrorWinMax:'You defeated yourself again! (Shards maxed)', mirrorLose:'Your Reflection won. The mirror will open again in 3 minutes.', shards:'Mirror Shards', mirrorCD:'The mirror is clouded ({t})',
     roamName:'Wandering Horror', roamWin:'Horror banished! +{x} aura', roamWinMark:'Horror banished! +{x} aura · +1 Conquest Mark', challengeRoam:'Fight', roamCD:'It will return…',
     music:'Music', sfxVol:'Effects', auraVol:'Aura sound', audioFiles:'Custom audio files found: {n}', audioNone:'Using built-in chill music (put files in /audio to replace)',
   },
@@ -368,7 +379,9 @@ const I18N = {
     wardrobe:'Tủ Đồ', tabAura:'Hào quang', tabNick:'Biệt hiệu', tabSkin:'Trang phục', equipped:'Đang dùng', equip:'Dùng', locked:'Chưa mở', unlockedNew:'Mở khóa: {n}!', nickname:'Biệt hiệu', skin:'Trang phục', auraStyle:'Hào quang',
     pvpCooldown:'Thách đấu đang hồi: {t}', pvpSeen:'{n} đã nhận được lời thách đấu…', pvpTimeout:'Không có phản hồi. Có thể thách đấu lại sau 1 phút.', pvpDeclinedCD:'Đối thủ từ chối. Có thể thách đấu lại sau 1 phút.', pvpBusy:'Đối thủ đang đánh boss — lời mời sẽ chờ.',
     gateSkip:'Cổng đã chinh phục — tự động vượt qua', speed:'Tốc độ',
-    mirrorGate:'Cổng Gương', enterMirror:'Đối mặt Bóng Gương', mirrorChance:'Cơ hội thắng: {p}%', mirrorWin:'Ngươi đã thắng chính mình! +1 Mảnh Gương (+3% mọi chỉ số)', mirrorWinMax:'Ngươi lại thắng chính mình! (Mảnh Gương đã tối đa)', mirrorLose:'Bóng Gương đã thắng. Gương sẽ mở lại sau 2 phút.', shards:'Mảnh Gương', mirrorCD:'Gương đang mờ ({t})',
+    reachHidden:'Đạt danh hiệu ???', defeatHidden:'Đánh bại ???',
+    memory:'Ký ức: {r}', replayEnding:'Xem lại màn kết', skip:'Bỏ qua',
+    mirrorGate:'Cổng Gương', enterMirror:'Đối mặt Bóng Gương', mirrorChance:'Cơ hội thắng: {p}%', mirrorWin:'Ngươi đã thắng chính mình! +1 Mảnh Gương (+3% mọi chỉ số)', mirrorWinMax:'Ngươi lại thắng chính mình! (Mảnh Gương đã tối đa)', mirrorLose:'Bóng Gương đã thắng. Gương sẽ mở lại sau 3 phút.', shards:'Mảnh Gương', mirrorCD:'Gương đang mờ ({t})',
     roamName:'Tà Ảnh Lang Thang', roamWin:'Đã xua tan Tà Ảnh! +{x} bá khí', roamWinMark:'Đã xua tan Tà Ảnh! +{x} bá khí · +1 Ấn Chinh Phục', challengeRoam:'Giao chiến', roamCD:'Nó sẽ quay lại…',
     music:'Nhạc nền', sfxVol:'Hiệu ứng', auraVol:'Âm hào quang', audioFiles:'Đã nhận file âm thanh riêng: {n}', audioNone:'Đang dùng nhạc chill có sẵn (bỏ file vào thư mục /audio để thay)',
   }
@@ -381,7 +394,7 @@ const REQ_TEXT = {
   free: { en:'Free', vi:'Miễn phí' }, best: { en:'Reach realm {c} (title #{v})', vi:'Đạt cảnh giới {c} (danh hiệu #{v})' }, R: { en:'Rebirth {v} times', vi:'Tái sinh {v} lần' },
   pvpW: { en:'Win {v} PvP duels', vi:'Thắng {v} trận PvP' }, bossWins: { en:'Defeat {v} Dungeon Gate bosses', vi:'Hạ {v} boss Cổng Ngục' }, riftWins: { en:'Conquer {v} Rift Gates', vi:'Chinh phục {v} Cổng Hoang' },
   roamWins: { en:'Banish {v} Wandering Horrors', vi:'Xua tan {v} Tà Ảnh' }, events: { en:'Enter {v} ×5 event gates', vi:'Vào {v} cổng sự kiện ×5' }, wells: { en:'Find {v} Aura Wells', vi:'Tìm {v} Giếng Bá Khí' },
-  stelae: { en:'Find {v} Ancient Stelae', vi:'Tìm {v} Bia Cổ' }, mirrorWins: { en:'Defeat your Reflection {v} times', vi:'Đánh bại Bóng Gương {v} lần' }, marks: { en:'Own {v} Conquest Marks', vi:'Sở hữu {v} Ấn Chinh Phục' }, dist: { en:'Travel {v} distance', vi:'Di chuyển quãng đường {v}' },
+  stelae: { en:'Find {v} Ancient Stelae', vi:'Tìm {v} Bia Cổ' }, finalWins: { en:'Defeat the Last Reflection', vi:'Đánh bại Bóng Gương Tối Hậu' }, mirrorWins: { en:'Defeat your Reflection {v} times', vi:'Đánh bại Bóng Gương {v} lần' }, marks: { en:'Own {v} Conquest Marks', vi:'Sở hữu {v} Ấn Chinh Phục' }, dist: { en:'Travel {v} distance', vi:'Di chuyển quãng đường {v}' },
 };
 function reqProgress(S, req){ const st = S.stats || {}; const [k, v] = req;
   const cur = k === 'free' ? 1 : k === 'best' ? S.best : k === 'R' ? S.R : k === 'pvpW' ? S.pvpW : k === 'wells' ? (S.wells||[]).length : k === 'stelae' ? (S.stelae||[]).length : k === 'marks' ? (S.marks||0) : (st[k] || 0);
@@ -405,6 +418,7 @@ const AURA_SKINS = [
   { id:'galaxy',   en:'Galaxy',            vi:'Thiên Hà',             req:['R',5],        over:{ h:250, s:90, l:62, oh:290, os:100, stars:1, nebula:1 } },
   { id:'ego',      en:'Destroyer Ego',     vi:'Bản Ngã Hủy Diệt',     req:['pvpW',20],    over:{ h:285, s:90, l:55, oh:300, os:100, darkCore:1, lightning:1, embers:2 } },
   { id:'solar',    en:'Solar Flare',       vi:'Thái Dương Hỏa',       req:['best',OT(150)],   over:{ h:30, s:100, l:62, oh:15, os:100, rays:1, embers:3 } },
+  { id:'shattered',en:'Shattered Mirror',  vi:'Gương Vỡ Vô Lượng',    req:['finalWins',1],over:{ h:350, s:85, l:72, oh:195, os:90, glass:1, afterimage:1, lightning:1, halo:1, embers:2 } }, // v1.6 final-boss reward
   { id:'prism',    en:'Prism Unlimited',   vi:'Vô Lượng Lăng Kính',   req:['best',OT(200)],   over:{ h:0, s:100, l:65, oh:0, os:100, rainbow:1, rays:1, halo:1, stars:1 } },
 ];
 // Nicknames (secondary titles shown above your name)
@@ -430,6 +444,7 @@ const NICKS = [
   { id:'eclipse',     en:'Eclipse Bearer',      vi:'Kẻ Mang Nhật Thực',     req:['best',OT(203)] },
   { id:'paradox',     en:'Living Paradox',      vi:'Nghịch Lý Sống',        req:['best',OT(222)] },
   { id:'godk',        en:'GodK',                vi:'GodK',                  req:['best',MAX_TITLE] },
+  { id:'mirrorbreaker',en:'Mirror Breaker',     vi:'Kẻ Vượt Gương',         req:['finalWins',1] },
   { id:'self',        en:'Self-Conqueror',      vi:'Kẻ Vượt Qua Chính Mình', req:['mirrorWins',1] },
   { id:'mirrormaster',en:'Master of Mirrors',   vi:'Chủ Nhân Của Gương',    req:['mirrorWins',5] },
   { id:'murimlord',   en:'Murim Lord',          vi:'Võ Lâm Minh Chủ',       req:['pvpW',25] },
