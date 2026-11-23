@@ -10,9 +10,11 @@
 
   // ---------------- Save ----------------
   const uid = () => 'p' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
-  const DEF = () => ({ v: 1, id: uid(), name: '', lang: (navigator.language||'').startsWith('vi') ? 'vi' : 'en', L: 1, xp: 0, t: 1, R: 0, E: 0, best: 1, stelae: [], wells: [], pvpW: 0, muted: false, vol: { m: 0.5, s: 0.8, a: 0.5 }, roamCD: {}, stats: {}, as: 'realm', sk: 'classic', nk: 'none', unlocks: [], pvpCD: 0, playSec: 0, marks: 0, riftCD: {}, riftSeen: [], buffUntil: 0, buffEv: -1 });
+  const DEF = () => ({ v: 1, id: uid(), name: '', lang: (navigator.language||'').startsWith('vi') ? 'vi' : 'en', L: 1, xp: 0, t: 1, R: 0, E: 0, best: 1, stelae: [], wells: [], pvpW: 0, muted: false, vol: { m: 0.5, s: 0.8, a: 0.5 }, roamCD: {}, stats: {}, as: 'realm', sk: 'classic', nk: 'none', unlocks: [], pvpCD: 0, playSec: 0, marks: 0, riftCD: {}, riftSeen: [], buffUntil: 0, buffEv: -1, tv: 2, shards: 0, mirrorCD: 0 });
   let S;
-  function load(){ try { const o = JSON.parse(localStorage.getItem(SAVE_KEY)); S = Object.assign(DEF(), o || {}); } catch(e) { S = DEF(); } }
+  function migrate(o){ // v1.5 inserted 50 titles: convert old title numbers (saves without tv:2)
+    if (o && !o.tv) { if (typeof o.t === 'number') o.t = OT(o.t); if (typeof o.best === 'number') o.best = OT(o.best); o.tv = 2; } return o; }
+  function load(){ try { const o = migrate(JSON.parse(localStorage.getItem(SAVE_KEY))); S = Object.assign(DEF(), o || {}); } catch(e) { S = DEF(); } }
   function save(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch(e){} }
   load(); save();
   const T = k => (I18N[S.lang] || I18N.en)[k] || k;
@@ -73,7 +75,7 @@
   function toast(msg, ms=2600){ const d = document.createElement('div'); d.className = 'toast'; d.innerHTML = msg; $('toasts').appendChild(d); setTimeout(()=>d.classList.add('out'), ms); setTimeout(()=>d.remove(), ms + 600); }
   function titleCss(t){ const A = R.auraStyle(t); return A.rainbow ? 'rainbow' : ''; }
   function titleColor(t){ const A = R.auraStyle(t); if (A.void) return `hsl(${A.oh},100%,72%)`; return `hsl(${A.h},${Math.max(40, A.s)}%,${Math.min(80, Math.max(60, A.l))}%)`; }
-  const myStats = () => F.stats(S.L, S.t, S.E, S.marks);
+  const myStats = () => F.stats(S.L, S.t, S.E, S.marks, S.shards);
   const buffOn = () => Date.now() < (S.buffUntil || 0);
   const capped = () => S.L >= F.levelCap(S.t);
   const inWell = () => WELLS.some(([x, y]) => Math.hypot(me.x - x, me.y - y) < 70);
@@ -145,8 +147,8 @@
     $('capMsg').textContent = T('capReached');
     const tg = scene === 'world' ? nearTarget() : null;
     $('gateBtn').style.display = tg ? 'block' : 'none';
-    if (tg) { const lbl = tg.kind === 'boss' ? '獄 ' + T('gateHint') : tg.kind === 'roam' ? `☠ ${T('challengeRoam')} · ${S.lang === 'vi' ? tg.r.B.vi : tg.r.B.en}` : `⛩ ${T('enterRift')} · ${RIFT_RANKS[RIFTS[tg.i][2]][S.lang]}`; if ($('gateBtn').textContent !== lbl) $('gateBtn').textContent = lbl;
-      $('gateBtn').style.borderColor = tg.kind === 'boss' ? '#ff5060' : tg.kind === 'roam' ? '#b060ff' : RIFT_RANKS[RIFTS[tg.i][2]].c; }
+    if (tg) { const lbl = tg.kind === 'boss' ? '獄 ' + T('gateHint') : tg.kind === 'mirror' ? `🪞 ${T('enterMirror')} · ${T('mirrorChance').replace('{p}', Math.round(MIRROR_WIN_CHANCE*100))}` : tg.kind === 'roam' ? `☠ ${T('challengeRoam')} · ${S.lang === 'vi' ? tg.r.B.vi : tg.r.B.en}` : `⛩ ${T('enterRift')} · ${RIFT_RANKS[RIFTS[tg.i][2]][S.lang]}`; if ($('gateBtn').textContent !== lbl) $('gateBtn').textContent = lbl;
+      $('gateBtn').style.borderColor = tg.kind === 'boss' || tg.kind === 'mirror' ? '#ff5060' : tg.kind === 'roam' ? '#b060ff' : RIFT_RANKS[RIFTS[tg.i][2]].c; }
   }
 
   let lbTab = 'room';
@@ -205,7 +207,7 @@
       ${S.R ? `<tr><td>✦ ${T('rebirths')}</td><td>${S.R}</td></tr><tr><td>💠 ${T('essence')}</td><td>${S.E}</td></tr>` : ''}
       <tr><td>📈 ${T('xpBonus')}</td><td>×${((1 + S.R)*(1 + 0.05*S.stelae.length)*(1 + 0.01*(S.marks||0))).toFixed(2)}</td></tr>
       ${S.stelae.length ? `<tr><td>🗿 ${T('stelae')}</td><td>${S.stelae.length} / ${STELAE.length}</td></tr>` : ''}
-      ${S.marks ? `<tr><td>⛩ ${T('marks')}</td><td>${S.marks} / ${MAX_MARKS}</td></tr>` : ''}<tr><td>⚔ ${T('pvpWins')}</td><td>${S.pvpW}</td></tr></table>${S.marks ? `<p class="muted small">⛩ ${T('markEffect')}</p>` : ''}
+      ${S.marks ? `<tr><td>⛩ ${T('marks')}</td><td>${S.marks} / ${MAX_MARKS}</td></tr>` : ''}${S.shards ? `<tr><td>🪞 ${T('shards')}</td><td>${S.shards} / ${MAX_SHARDS}</td></tr>` : ''}<tr><td>⚔ ${T('pvpWins')}</td><td>${S.pvpW}</td></tr></table>${S.marks ? `<p class="muted small">⛩ ${T('markEffect')}</p>` : ''}
       ${S.stelae.length ? `<div class="lore">${S.stelae.map(i => `<p>🗿 ${esc(STELAE_LORE[i][S.lang])}</p>`).join('')}</div>` : ''}
       <div class="row"><button class="btn" data-close>${T('close')}</button></div>`);
   }
@@ -214,14 +216,14 @@
   $('btnCodex').onclick = () => {
     let h = `<h2>📜 ${T('codex')}</h2><div class="codex">`;
     const maxTier = tierOf(Math.min(S.best, MAX_TITLE));
-    for (let ti = 0; ti < 10; ti++) {
+    for (let ti = 0; ti < UNL; ti++) {
       if (ti > maxTier) { h += `<div class="cTier"><b>${T('unknown')}</b></div>`; break; }
       h += `<div class="cTier"><b>${ti+1}. ${esc(TIERS[ti][S.lang])}</b><div class="cGrid">`;
-      for (let t = ti*20 + 1; t <= ti*20 + 20; t++) { const known = t <= S.best; const next = t === S.best + 1;
+      for (let t = realmStart(ti); t < realmStart(ti) + realmSize(ti); t++) { const known = t <= S.best; const next = t === S.best + 1;
         h += `<div class="cItem${t === S.t ? ' cur' : ''}${known ? '' : ' locked'}" ${known ? `style="color:${titleColor(t)}"` : ''}>${known ? esc(tn(t)) : (next ? '❔ ' + T('next') : T('unknown'))}</div>`; }
       h += '</div></div>';
     }
-    if (S.best > MAX_TITLE) h += `<div class="cTier"><b>∞ ${esc(TIERS[10][S.lang])}</b><div class="cGrid">${Array.from({ length: S.best - MAX_TITLE }, (_, i) => `<div class="cItem rainbow">${esc(tn(MAX_TITLE + i + 1))}</div>`).join('')}</div></div>`;
+    if (S.best > MAX_TITLE) h += `<div class="cTier"><b>∞ ${esc(TIERS[UNL][S.lang])}</b><div class="cGrid">${Array.from({ length: S.best - MAX_TITLE }, (_, i) => `<div class="cItem rainbow">${esc(tn(MAX_TITLE + i + 1))}</div>`).join('')}</div></div>`;
     h += `</div><div class="row"><button class="btn" data-close>${T('close')}</button></div>`;
     modal(h);
   };
@@ -253,7 +255,7 @@
     [['vM', 'm'], ['vS', 's'], ['vA', 'a']].forEach(([id, k]) => { $(id).oninput = e => { S.vol[k] = +e.target.value; AudioM.setVol(S.vol); }; $(id).onchange = () => { save(); if (k === 's') sfx.lvl(); }; });
     $('sExp').onclick = () => { const b = $('sBox'); b.style.display = 'block'; b.value = btoa(unescape(encodeURIComponent(JSON.stringify(S)))); b.select(); };
     $('sImp').onclick = () => { const b = $('sBox'); if (b.style.display !== 'block' || !b.value.trim()) { b.style.display = 'block'; b.value = ''; b.placeholder = T('importPrompt'); b.focus(); return; }
-      try { const o = JSON.parse(decodeURIComponent(escape(atob(b.value.trim())))); if (typeof o.t !== 'number' || typeof o.L !== 'number') throw 0; S = Object.assign(DEF(), o); save(); toast(T('importOk')); refreshHUD(true); pushLB(); closeModal(); } catch(e) { toast(T('importBad')); } };
+      try { const o = migrate(JSON.parse(decodeURIComponent(escape(atob(b.value.trim()))))); if (typeof o.t !== 'number' || typeof o.L !== 'number') throw 0; S = Object.assign(DEF(), o); save(); toast(T('importOk')); refreshHUD(true); pushLB(); closeModal(); } catch(e) { toast(T('importBad')); } };
     $('sLeave').onclick = () => $('leaveBtn').onclick();
   };
   // ---------------- v1.3 Wardrobe & unlocks ----------------
@@ -318,6 +320,7 @@
   const riftReady = i => Date.now() >= ((S.riftCD || {})[i] || 0);
   function nearTarget(){
     if (capped() && Math.hypot(me.x - GATE.x, me.y - GATE.y) < 170) return { kind: 'boss' };
+    if (Date.now() >= (S.mirrorCD || 0) && Math.hypot(me.x - MIRROR_GATE.x, me.y - MIRROR_GATE.y) < 130) return { kind: 'mirror' };
     for (let i = 0; i < RIFTS.length; i++) if (riftReady(i) && Math.hypot(me.x - RIFTS[i][0], me.y - RIFTS[i][1]) < 140) return { kind: 'rift', i };
     const pool = unlockedBosses(S.t), now = Date.now();
     for (let i = 0; i < ROAMERS.length; i++) { const r = roamerAt(i, now, pool); if (now >= ((S.roamCD || {})[i] || 0) && Math.hypot(me.x - r.x, me.y - r.y) < 150) return { kind: 'roam', i, r }; }
@@ -326,7 +329,7 @@
   function interact(){
     if (scene !== 'world') return;
     const tg = nearTarget(); if (!tg) return;
-    if (tg.kind === 'boss') startBoss(); else if (tg.kind === 'roam') startRoam(tg.r); else startRift(tg.i);
+    if (tg.kind === 'boss') startBoss(); else if (tg.kind === 'mirror') startMirror(); else if (tg.kind === 'roam') startRoam(tg.r); else startRift(tg.i);
   }
   $('gateBtn').onclick = interact;
 
@@ -334,7 +337,7 @@
   let fight = null;
   function mulberry(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
   const bossName = (B, fi) => `${S.lang === 'vi' ? B.vi : B.en} · ${BOSS_FORMS[fi][S.lang]}`;
-  function startBoss(){ const g = S.t; beginBossFight({ kind: 'boss', g, B: bossFor(g), st: F.boss(g), form: bossForm(g), jump: g % 20 === 0 ? 2 : 1 }); }
+  function startBoss(){ const g = S.t; beginBossFight({ kind: 'boss', g, B: bossFor(g), st: F.boss(g), form: bossForm(g), jump: isRealmEnd(g) ? 2 : 1 }); }
   function startRift(i){
     const RK = RIFT_RANKS[RIFTS[i][2]], g = S.t, b = F.boss(g), pool = unlockedBosses(g);
     const st = { hp: b.hp*RK.mult, atk: b.atk*RK.mult, def: b.def*RK.mult, crit: b.crit };
@@ -344,12 +347,16 @@
     const g = S.t, b = F.boss(g); const st = { hp: b.hp*ROAM_MULT, atk: b.atk*ROAM_MULT, def: b.def*ROAM_MULT, crit: b.crit };
     beginBossFight({ kind: 'roam', i: r.i, g, B: r.B, st, form: Math.min(8, 1 + Math.floor(tierOf(g)*0.8)), jump: 1 });
   }
+  function startMirror(){
+    const p = myStats(); const st = { hp: p.hp*MIRROR_MULT, atk: p.atk*MIRROR_MULT, def: p.def*MIRROR_MULT, crit: p.crit };
+    beginBossFight({ kind: 'mirror', g: S.t, B: MIRROR_BOSS, st, form: 0, jump: 0, script: Math.random() < MIRROR_WIN_CHANCE });
+  }
   function beginBossFight(o){
     const { g, B, st } = o;
-    const hue = (B.hue + (g%20)*7) % 360;
-    fight = { kind: o.kind, riftI: o.i, g, B, rng: Math.random, hue, form: o.form, jump: o.jump, aBoost: 0, transformed: false,
+    const hue = (B.hue + posOf(g)*6) % 360;
+    fight = { kind: o.kind, riftI: o.i, g, B, rng: Math.random, hue, form: o.form, jump: o.jump, aBoost: 0, transformed: o.kind === 'mirror', script: o.script,
       L: { name: S.name, t: S.t, st: myStats(), hp: 0, fx: {}, hurt: 0, atk: 0, sk: S.sk, as: S.as },
-      Rt: { name: bossName(B, o.form), st, hp: 0, hurt: 0, atk: 0, fx: {} },
+      Rt: { name: o.kind === 'mirror' ? (S.lang === 'vi' ? B.vi : B.en) : bossName(B, o.form), st, hp: 0, hurt: 0, atk: 0, fx: {} },
       phase: 'intro', timer: 0, round: 0, beams: [], nums: [], intro: B.intro[S.lang], result: null };
     fight.L.hp = fight.L.st.hp; fight.Rt.hp = st.hp;
     scene = 'fight'; $('hud').classList.add('dim'); $('fightUI').style.display = 'block'; sfx.beat();
@@ -372,17 +379,17 @@
       while (f.timer >= tick && f.phase === 'fight') {
         f.timer -= tick; f.round++;
         // left attacks
-        let [d, c] = hitCalc(f.L.st, f.Rt.st, f.rng); f.Rt.hp -= d; f.Rt.hurt = 0.25; f.L.atk = 1;
+        let [d, c] = hitCalc(f.L.st, f.Rt.st, f.rng); if (f.script !== undefined) { d *= f.script ? 1.3 : 0.8; if (!f.script && f.Rt.hp - d <= 0) d = Math.max(0, f.Rt.hp - 1); } f.Rt.hp -= d; f.Rt.hurt = 0.25; f.L.atk = 1;
         f.beams.push({ from: 'L', life: 0.35, crit: c }); f.nums.push({ side: 'R', v: d, crit: c, life: 1, ox: (Math.random() - 0.5)*80 }); sfx.hit();
         if (f.Rt.hp <= 0) { end(true); break; }
         if (f.kind !== 'pvp' && !f.transformed && f.Rt.hp < f.Rt.st.hp*0.5) { f.transformed = true; f.form = Math.min(BOSS_FORMS.length - 1, f.form + f.jump); f.aBoost = 1;
           f.Rt.name = bossName(f.B, f.form); const FF = BOSS_FORMS[f.form]; flash(`hsl(${FF.h},${FF.s}%,${FF.l}%)`, 0.7); sfx.transform();
           bigBanner(T('transform'), f.Rt.name, `hsl(${FF.h},${FF.s}%,${Math.max(60, FF.l)}%)`); }
-        [d, c] = hitCalc(f.Rt.st, f.L.st, f.rng); f.L.hp -= d; f.L.hurt = 0.25; f.Rt.atk = 1;
+        [d, c] = hitCalc(f.Rt.st, f.L.st, f.rng); if (f.script !== undefined) { d *= f.script ? 0.8 : 1.3; if (f.script && f.L.hp - d <= 0) d = Math.max(0, f.L.hp - 1); } f.L.hp -= d; f.L.hurt = 0.25; f.Rt.atk = 1;
         f.beams.push({ from: 'R', life: 0.35, crit: c }); f.nums.push({ side: 'L', v: d, crit: c, life: 1, ox: (Math.random() - 0.5)*80 });
         if (f.kind !== 'pvp' && c) flash('#300', 0.6);
         if (f.L.hp <= 0) { end(false); break; }
-        if (f.round >= 70) { end(f.kind === 'pvp' ? (f.L.hp/f.L.st.hp >= f.Rt.hp/f.Rt.st.hp) : false); break; }
+        if (f.round >= 70) { end(f.script !== undefined ? f.script : f.kind === 'pvp' ? (f.L.hp/f.L.st.hp >= f.Rt.hp/f.Rt.st.hp) : false); break; }
       }
       return;
     }
@@ -390,12 +397,15 @@
   }
   function end(leftWon){
     const f = fight; f.phase = 'end'; f.timer = 0; f.result = leftWon;
-    if (f.kind !== 'pvp') { if (leftWon) { sfx.win(); bigBanner(T('victory'), f.Rt.name, '#ffd76a'); } else { sfx.lose(); bigBanner(f.Rt.name, T('defeat'), '#f44', '', f.kind === 'rift' ? T('riftLose') : f.kind === 'roam' ? T('roamCD') : T('bossLoseHint')); } }
+    if (f.kind !== 'pvp') { if (leftWon) { sfx.win(); bigBanner(T('victory'), f.Rt.name, '#ffd76a'); } else { sfx.lose(); bigBanner(f.Rt.name, T('defeat'), '#f44', '', f.kind === 'rift' ? T('riftLose') : f.kind === 'roam' ? T('roamCD') : f.kind === 'mirror' ? T('mirrorLose') : T('bossLoseHint')); } }
     else { const iWon = (f.myRole === 'a') === leftWon; if (iWon) { S.pvpW++; save(); sfx.win(); } else sfx.lose(); bigBanner(iWon ? T('victory') : T('defeat'), `${leftWon ? f.L.name : f.Rt.name} 👑`, iWon ? '#ffd76a' : '#f44'); }
   }
   function finishFight(){
     const f = fight; fight = null; scene = 'world'; $('hud').classList.remove('dim'); $('fightUI').style.display = 'none';
     if (f.kind === 'boss') { me.x = GATE.x; me.y = GATE.y + 200; if (f.result) { S.stats.bossWins = (S.stats.bossWins || 0) + 1; titleUp(true); } }
+    else if (f.kind === 'mirror') { me.x = MIRROR_GATE.x; me.y = MIRROR_GATE.y + 150; S.mirrorCD = Date.now() + (f.result ? MIRROR_CD_WIN : MIRROR_CD_LOSE);
+      if (f.result) { S.stats.mirrorWins = (S.stats.mirrorWins || 0) + 1; const got = (S.shards||0) < MAX_SHARDS; if (got) S.shards = (S.shards||0) + 1; toast('🪞 ' + (got ? T('mirrorWin') : T('mirrorWinMax')), 5000); pushLB(); }
+      save(); }
     else if (f.kind === 'roam') { S.roamCD = S.roamCD || {}; S.roamCD[f.riftI] = Date.now() + (f.result ? ROAM_CD : RIFT_CD_LOSE); me.y += 120;
       if (f.result) { S.stats.roamWins = (S.stats.roamWins || 0) + 1; let xp = F.xpRate(S, true, false, false) * ROAM_XP_SEC; const got = xp;
         while (!capped() && xp > 0) { const need = F.xpNeed(S.L) - S.xp; if (xp >= need) { xp -= need; S.xp = 0; S.L++; } else { S.xp += xp; xp = 0; } }
@@ -467,7 +477,7 @@
   }
 
   // ---------------- Update ----------------
-  let saveT = 0, lbT = 0, announcedEv = -1; const roamFx = {};
+  let saveT = 0, lbT = 0, announcedEv = -1; const roamFx = {}; const mirrorCh = { fx: {}, seed: 9 };
   function updateWorld(dt){
     let dx = 0, dy = 0;
     if (keys['w'] || keys['arrowup']) dy -= 1; if (keys['s'] || keys['arrowdown']) dy += 1;
@@ -518,6 +528,9 @@
         R.boss(ctx, r.B.id, 0, 0, sz, time + i*3, { hue: r.B.hue, hurt: 0, atk: 0, g: S.t, target: [-300, -50], fx: (roamFx[i] = roamFx[i] || {}) }); ctx.restore();
         ctx.textAlign = 'center'; ctx.font = `700 ${Math.max(10, 12*cam.z)}px ${FONT}`; ctx.fillStyle = '#d9a6ff'; ctx.shadowColor = '#000'; ctx.shadowBlur = 5;
         ctx.fillText(`☠ ${S.lang === 'vi' ? r.B.vi : r.B.en}`, sx, sy - sz*1.25 - 8); ctx.shadowBlur = 0; } }); } }
+    mirrorCh.t = S.t; mirrorCh.sk = S.sk; mirrorCh.as = S.as;
+    if (vis(MIRROR_GATE.x, MIRROR_GATE.y, 300)) list.push({ y: MIRROR_GATE.y, f: () => { const [sx, sy] = w2s(MIRROR_GATE.x, MIRROR_GATE.y); const rd = Date.now() >= (S.mirrorCD || 0);
+      R.mirrorGate(ctx, sx, sy, cam.z, time, rd, `🪞 ${T('mirrorGate')}`, rd ? T('mirrorChance').replace('{p}', Math.round(MIRROR_WIN_CHANCE*100)) : T('mirrorCD').replace('{t}', mmss(S.mirrorCD - Date.now())), mirrorCh); } });
     const evw = eventAt(Date.now()); if (evw.active && vis(evw.x, evw.y, 500)) list.push({ y: evw.y, f: () => { const [sx, sy] = w2s(evw.x, evw.y); R.eventGate(ctx, sx, sy, cam.z, time, evw, evw.type[S.lang], S.buffEv === evw.idx); } });
     if (vis(GATE.x, GATE.y, 500)) list.push({ y: GATE.y, f: () => { const [sx, sy] = w2s(GATE.x, GATE.y); R.gate(ctx, sx, sy, cam.z, time, capped()); } });
     for (const id in others) { const o = others[id]; if (!vis(o.x, o.y)) continue; list.push({ y: o.y, f: () => { const [sx, sy] = w2s(o.x, o.y); R.character(ctx, sx, sy, cam.z*1.25, o, time); nameTag(sx, sy, o.n, o.t, false, o.nk); } }); }
@@ -551,6 +564,7 @@
     mctx.fillStyle = '#f33'; let [x, y] = p(GATE.x, GATE.y); mctx.fillRect(x - 3, y - 3, 6, 6);
     S.wells.forEach(i => { const [a, b] = p(...WELLS[i]); mctx.fillStyle = '#6fe'; mctx.beginPath(); mctx.arc(a, b, 3, 0, 7); mctx.fill(); });
     S.stelae.forEach(i => { const [a, b] = p(...STELAE[i]); mctx.fillStyle = '#ca6'; mctx.fillRect(a - 1.5, b - 1.5, 3, 3); });
+    { const [a, b] = p(MIRROR_GATE.x, MIRROR_GATE.y); mctx.fillStyle = Date.now() >= (S.mirrorCD || 0) ? '#ff6a80' : '#555'; mctx.beginPath(); mctx.ellipse(a, b, 2.5, 4, 0, 0, 7); mctx.fill(); }
     (S.riftSeen || []).forEach(i => { const [a, b] = p(RIFTS[i][0], RIFTS[i][1]); mctx.fillStyle = riftReady(i) ? RIFT_RANKS[RIFTS[i][2]].c : '#555'; mctx.save(); mctx.translate(a, b); mctx.rotate(Math.PI/4); mctx.fillRect(-3, -3, 6, 6); mctx.restore(); });
     { const pool = unlockedBosses(S.t), now = Date.now(); for (let i = 0; i < ROAMERS.length; i++) { const r = roamerAt(i, now, pool); if (now < ((S.roamCD || {})[i] || 0) || Math.hypot(r.x - me.x, r.y - me.y) > 1400) continue;
       const [a, b] = p(r.x, r.y); mctx.fillStyle = '#b060ff'; mctx.font = '9px sans-serif'; mctx.textAlign = 'center'; mctx.fillText('☠', a, b + 3); } }
@@ -577,15 +591,16 @@
     const lx = W*0.24, rx = W*0.72;
     // boss / right side
     if (boss) {
-      const S_ = Math.min(H*0.62, W*0.45) * (0.85 + (f.g%20)/20*0.25) * (f.g%20 === 0 ? 1.15 : 1);
+      const S_ = Math.min(H*0.62, W*0.45) * (0.85 + subOf(f.g)/20*0.25) * (isRealmEnd(f.g) ? 1.15 : 1);
       // fog
       for (let i = 0; i < 4; i++) { const fx = (time*20*(i + 1) + i*300) % (W + 400) - 200; const g = ctx.createRadialGradient(fx, floorY - 40, 0, fx, floorY - 40, 260); g.addColorStop(0, `hsla(${f.hue},70%,20%,0.18)`); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(fx - 260, floorY - 300, 520, 520); }
       const lunge = f.Rt.atk > 0 ? -f.Rt.atk*40 : 0;
       const flicker = Math.random() < 0.03 ? 0.2 : 1;
       ctx.globalAlpha = f.phase === 'intro' ? Math.min(1, f.timer/2.5) * flicker : (f.phase === 'end' && f.result === true ? Math.max(0, 1 - f.timer/1.8) : flicker);
       f.aBoost = Math.max(0, f.aBoost - dt*0.5);
+      if (f.kind === 'mirror') { R.character(ctx, rx + lunge*0.5, floorY, sc*1.3, { t: S.t, sk: S.sk, as: S.as, face: -1, fx: f.Rt.fx, mirror: true, seed: 7, moving: false }, time); } else {
       ctx.save(); ctx.globalAlpha *= 1; R.bossAura(ctx, rx + lunge, floorY, S_, time, f.form, f.aBoost); ctx.restore();
-      R.boss(ctx, f.B.id, rx + lunge, floorY, S_, time, { hue: f.hue, hurt: f.Rt.hurt, atk: f.Rt.atk, g: f.g, target: [lx - rx, -S_*0.3], fx: f.Rt.fx });
+      R.boss(ctx, f.B.id, rx + lunge, floorY, S_, time, { hue: f.hue, hurt: f.Rt.hurt, atk: f.Rt.atk, g: f.g, target: [lx - rx, -S_*0.3], fx: f.Rt.fx }); }
       ctx.globalAlpha = 1;
       if (f.Rt.hurt > 0) burn(rx, floorY - S_*0.5, S_*0.3);
       if (f.result === true && f.phase === 'end' && f.timer < 1.8) burn(rx, floorY - S_*0.5, S_*0.5);
@@ -620,7 +635,7 @@
     // bars
     const bar = (x, y, w, hp, max, name, t, isBoss) => { ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(x, y, w, 14); ctx.fillStyle = isBoss ? '#a00' : '#3c3'; ctx.fillRect(x, y, w*Math.max(0, hp/max), 14);
       ctx.strokeStyle = '#000'; ctx.strokeRect(x, y, w, 14); ctx.fillStyle = '#fff'; ctx.font = `bold 13px ${FONT}`; ctx.textAlign = 'left'; ctx.fillText(name, x, y - 6);
-      ctx.textAlign = 'right'; ctx.font = `11px ${FONT}`; ctx.fillStyle = isBoss ? '#f88' : titleColor(t); ctx.fillText(isBoss ? (f.kind === 'rift' ? '⛩ ' + RIFT_RANKS[RIFTS[f.riftI][2]][S.lang] : f.kind === 'roam' ? '☠ ' + T('roamName') : '') : tn(t), x + w, y - 6); ctx.fillStyle = '#ddd'; ctx.fillText(`${fmt(Math.max(0, hp))} / ${fmt(max)}`, x + w, y + 28); };
+      ctx.textAlign = 'right'; ctx.font = `11px ${FONT}`; ctx.fillStyle = isBoss ? '#f88' : titleColor(t); ctx.fillText(isBoss ? (f.kind === 'rift' ? '⛩ ' + RIFT_RANKS[RIFTS[f.riftI][2]][S.lang] : f.kind === 'roam' ? '☠ ' + T('roamName') : f.kind === 'mirror' ? '🪞 ' + T('mirrorChance').replace('{p}', Math.round(MIRROR_WIN_CHANCE*100)) : '') : tn(t), x + w, y - 6); ctx.fillStyle = '#ddd'; ctx.fillText(`${fmt(Math.max(0, hp))} / ${fmt(max)}`, x + w, y + 28); };
     const bw = Math.min(320, W*0.4);
     bar(16, 40, bw, f.L.hp, f.L.st.hp, f.L.name, f.L.t, false);
     bar(W - bw - 16, 40, bw, f.Rt.hp, f.Rt.st.hp, f.Rt.name, f.Rt.t, boss);
@@ -641,8 +656,8 @@
   function frame(now){
     requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - last)/1000); last = now; time += dt;
-    AudioM.music(scene === 'lobby' ? 'lobby' : scene === 'fight' && fight ? (fight.kind === 'pvp' ? 'pvp' : 'fight') : 't' + Math.min(10, tierOf(S.t)));
-    AudioM.aura(Math.min(10, tierOf(S.t)), me.moving, scene === 'world');
+    AudioM.music(scene === 'lobby' ? 'lobby' : scene === 'fight' && fight ? (fight.kind === 'pvp' ? 'pvp' : 'fight') : 't' + Math.min(UNL, tierOf(S.t)));
+    AudioM.aura(Math.min(UNL, tierOf(S.t)), me.moving, scene === 'world');
     pvpTick(); unlockTick();
     if (scene === 'lobby') drawLobby();
     else if (scene === 'world') { updateWorld(dt); drawWorld(dt); refreshHUD(false); }

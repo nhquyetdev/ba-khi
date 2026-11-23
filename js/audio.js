@@ -4,8 +4,8 @@ const AudioM = (() => {
   let ac = null, master, musicBus, sfxBus, auraBus, revIn, delayIn;
   const vol = { m: 0.5, s: 0.8, a: 0.5 }; let muted = false;
   const files = {}; // key -> url (found in /audio)
-  const FILE_KEYS = ['bgm/lobby', 'bgm/fight', 'bgm/pvp', 'bgm/unlimited', 'bgm/default', ...Array.from({ length: 10 }, (_, i) => `bgm/tier${i + 1}`),
-    'sfx/aura', ...Array.from({ length: 10 }, (_, i) => `sfx/aura_tier${i + 1}`), 'sfx/levelup', 'sfx/title', 'sfx/hit', 'sfx/hurt', 'sfx/win', 'sfx/lose', 'sfx/transform', 'sfx/event', 'sfx/find', 'sfx/rebirth'];
+  const FILE_KEYS = ['bgm/lobby', 'bgm/fight', 'bgm/pvp', 'bgm/unlimited', 'bgm/default', ...Array.from({ length: 13 }, (_, i) => `bgm/tier${i + 1}`),
+    'sfx/aura', ...Array.from({ length: 13 }, (_, i) => `sfx/aura_tier${i + 1}`), 'sfx/levelup', 'sfx/title', 'sfx/hit', 'sfx/hurt', 'sfx/win', 'sfx/lose', 'sfx/transform', 'sfx/event', 'sfx/find', 'sfx/rebirth'];
   const EXTS = ['mp3'];
 
   // ---------- probe /audio folder ----------
@@ -68,7 +68,10 @@ const AudioM = (() => {
     t7:  { root: 71, sc: 'lyd', prog: [0,1,0,1], bpm: 68, pad: 'sine',     cut: 2600, pluck: 'sine',     arp: 0.5,  bell: 0.45, echo: 1, high: 1 },
     t8:  { root: 63, sc: 'maj', prog: [0,4,5,3], bpm: 70, pad: 'sine',     cut: 2400, pluck: 'sine',     arp: 0.3,  bell: 0.25, choir: 1, echo: 1 },
     t9:  { root: 50, sc: 'whole', prog: [0,2,4,1], bpm: 50, pad: 'triangle', cut: 800, pluck: 'sine',    arp: 0.15, drone: 1, bell: 0.15, echo: 1 },
-    t10: { root: 60, sc: 'lyd', prog: [0,3,1,4], bpm: 66, pad: 'sine',     cut: 2400, pluck: 'triangle', arp: 0.5,  bell: 0.3, choir: 1, echo: 1, shift: 1 },
+    t10: { root: 55, sc: 'mix', prog: [0,6,3,4], bpm: 70, pad: 'sawtooth', cut: 1500, pluck: 'triangle', arp: 0.4,  bell: 0.25, choir: 1, echo: 1, bass: 1 },   // v1.4 eclipse
+    t11: { root: 61, sc: 'whole', prog: [0,3,1,4], bpm: 58, pad: 'triangle', cut: 1800, pluck: 'sine',   arp: 0.45, bell: 0.35, echo: 1, drone: 1, high: 1 },  // paradox
+    t12: { root: 62, sc: 'lyd', prog: [0,4,1,5], bpm: 74, pad: 'sine',     cut: 2800, pluck: 'triangle', arp: 0.6,  bell: 0.4, choir: 1, echo: 1, sixteenth: 1 }, // final names
+    t13: { root: 60, sc: 'lyd', prog: [0,3,1,4], bpm: 66, pad: 'sine',     cut: 2400, pluck: 'triangle', arp: 0.5,  bell: 0.3, choir: 1, echo: 1, shift: 1 },   // layers beyond GodK
     lobby:{ root: 57, sc: 'dor', prog: [0,3,5,4], bpm: 70, pad: 'triangle', cut: 1100, pluck: 'sine',    arp: 0.3,  lofi: 1, bell: 0.06 },
     fight:{ root: 38, sc: 'phr', prog: [0,0,1,0], bpm: 92, pad: 'sawtooth', cut: 500,  pluck: 'square',   arp: 0.12, drone: 1, pulse: 1, heart: 1 },
     pvp:  { root: 52, sc: 'min', prog: [0,5,6,4], bpm: 104, pad: 'sawtooth', cut: 1300, pluck: 'triangle', arp: 0.55, lofi: 1, bass: 1, drive: 1 },
@@ -79,7 +82,7 @@ const AudioM = (() => {
   let fileEl = null, fileFade = 1, fileKey = null;
   function fileFor(key){ if (key === 'lobby') return files['bgm/lobby'] || files['bgm/default'];
     if (key === 'fight') return files['bgm/fight']; if (key === 'pvp') return files['bgm/pvp'] || files['bgm/fight'];
-    if (key === 't10') return files['bgm/unlimited'] || files['bgm/tier10'] || files['bgm/default'];
+    if (key === 't13') return files['bgm/unlimited'] || files['bgm/tier13'] || files['bgm/default'];
     const m = /^t(\d+)$/.exec(key); if (m) return files[`bgm/tier${+m[1] + 1}`] || files['bgm/default']; return null; }
   function music(key){
     if (!ac) { pendingTrack = key; return; }
@@ -121,11 +124,11 @@ const AudioM = (() => {
   function aura(tier, moving, on){
     if (!ac) return;
     const target = on ? Math.min(1, 0.18 + tier*0.07) * (moving ? 1.25 : 1) : 0;
-    const url = files[`sfx/aura_tier${Math.min(10, tier + 1)}`] || files['sfx/aura'];
+    const url = files[`sfx/aura_tier${Math.min(13, tier + 1)}`] || files['sfx/aura'];
     if (url) {
       if (auraNodes) { auraNodes.g.gain.setTargetAtTime(0, ac.currentTime, 0.2); }
       if (!auraEl || auraEl._src !== url) { if (auraEl) auraEl.pause(); auraEl = new Audio(url); auraEl._src = url; auraEl.loop = true; auraEl.play().catch(()=>{}); }
-      auraEl.playbackRate = files[`sfx/aura_tier${Math.min(10, tier + 1)}`] ? 1 : 0.8 + Math.min(10, tier)*0.04;
+      auraEl.playbackRate = files[`sfx/aura_tier${Math.min(13, tier + 1)}`] ? 1 : 0.8 + Math.min(13, tier)*0.035;
       auraLevel += (target - auraLevel)*0.1; auraEl.volume = muted ? 0 : Math.max(0, Math.min(1, vol.a*auraLevel)); return;
     }
     if (!auraNodes) { const s = ac.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 0.8; const lp = ac.createBiquadFilter(); lp.type = 'lowpass';
@@ -133,11 +136,11 @@ const AudioM = (() => {
       const g = ac.createGain(); g.gain.value = 0; s.connect(bp); bp.connect(lp); lp.connect(g); hum.connect(hg); hg.connect(g); lfo.connect(lg); lg.connect(g.gain); g.connect(auraBus);
       s.start(); hum.start(); lfo.start(); auraNodes = { bp, lp, hum, g }; }
     if (tier !== auraTier) { auraTier = tier; const t = ac.currentTime;
-      auraNodes.bp.frequency.setTargetAtTime([300, 420, 520, 900, 600, 760, 220, 1200, 1500, 160, 700][Math.min(10, tier)], t, 0.4);
-      auraNodes.lp.frequency.setTargetAtTime(900 + tier*300, t, 0.4); auraNodes.hum.frequency.setTargetAtTime([0, 55, 65, 98, 73, 82, 41, 110, 130, 36, 49][Math.min(10, tier)] || 0.001, t, 0.4); }
+      auraNodes.bp.frequency.setTargetAtTime([300, 420, 520, 900, 600, 760, 220, 1200, 1500, 160, 820, 640, 1100, 700][Math.min(13, tier)], t, 0.4);
+      auraNodes.lp.frequency.setTargetAtTime(900 + tier*300, t, 0.4); auraNodes.hum.frequency.setTargetAtTime([0, 55, 65, 98, 73, 82, 41, 110, 130, 36, 46, 52, 61, 49][Math.min(13, tier)] || 0.001, t, 0.4); }
     auraNodes.g.gain.setTargetAtTime(target*0.35, ac.currentTime, 0.25);
     // electric crackles for lightning tiers
-    if (on && [2, 6, 7, 9, 10].includes(tier) && ac.currentTime > crackT) { crackT = ac.currentTime + 0.15 + Math.random()*0.6; noiseHit(ac.currentTime, 3000, 0.05*target, 0.04, auraBus); }
+    if (on && [2, 6, 7, 9, 10, 11, 12, 13].includes(tier) && ac.currentTime > crackT) { crackT = ac.currentTime + 0.15 + Math.random()*0.6; noiseHit(ac.currentTime, 3000, 0.05*target, 0.04, auraBus); }
   }
 
   // ---------- sfx ----------

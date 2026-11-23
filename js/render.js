@@ -21,8 +21,13 @@ const R = (() => {
     { h:185, s:100,l:75, oh:200, os:100, size:1.9, alpha:0.85, tongues:13, rings:1, glitch:1, lightning:1, pulse:1 },  // 8 Transcendent
     { h:45,  s:100,l:85, oh:40, os:100, size:2.05, alpha:0.95, tongues:15, rays:1, wings:1, halo:1, embers:3, pulse:1 }, // 9 Supreme
     { h:275, s:90, l:55, oh:285, os:100, size:2.25, alpha:1, tongues:15, void:1, inward:1, runes:1, lightning:1, pulse:1 }, // 10 Unfathomable
-    { h:0,   s:100,l:65, oh:0,  os:100, size:2.45, alpha:1, tongues:17, rainbow:1, rays:1, void:1, lightning:1, halo:1, stars:1, runes:1, pulse:1 }, // Unlimited
+    { h:42,  s:100,l:68, oh:22, os:100, size:2.4, alpha:1, tongues:17, eclipse:1, embers:3, lightning:1, pulse:1 },                          // 11 Beyond the Unlimited: black-sun eclipse
+    { h:185, s:100,l:64, oh:200,os:100, h2:312, size:2.5, alpha:1, tongues:17, dual:1, yinyang:1, afterimage:1, lightning:1, pulse:1 },     // 12 Paradox: split cyan/magenta, yin-yang, afterimages
+    { h:0,   s:100,l:74, oh:0,  os:100, size:2.6, alpha:1, tongues:19, rainbow:1, spiral:1, dragon:1, crownlight:1, eclipse:1, rays:1, pulse:1 }, // 13 Final Names: genesis storm
+    { h:0,   s:100,l:68, oh:0,  os:100, size:2.65, alpha:1, tongues:19, rainbow:1, rays:1, void:1, lightning:1, halo:1, stars:1, runes:1, spiral:1, dragon:1, yinyang:1, pulse:1 }, // Layers beyond GodK
   ];
+  // v1.4: second half of every realm (sub-title 11–20) awakens extra effects
+  const AURA_P2 = [ { sparks:1, embers:1 }, { lightning:1, embers:2 }, { lightning:1, pillar:1 }, { wings:1 }, { comet:1 }, { rays:1 }, { afterimage:1 }, { clock:1 }, { crownlight:1 }, { eyeVoid:1 }, { dragon:1 }, { spiral:1 }, {}, {} ];
 
   // ---------------- Poses ----------------
   // angles from straight-down (radians); + = toward screen-right. ua/la arm upper/lower, ut/ls leg thigh/shin
@@ -39,7 +44,7 @@ const R = (() => {
       return P;
     }
     const br = Math.sin(time*2)*0.04;
-    switch (Math.min(tier, 10)) {
+    switch (Math.min(tier, 13)) {
       case 0: Object.assign(P, { lua:-0.15-br, lla:-0.1-br, rua:0.15+br, rla:0.1+br }); break;                                   // relaxed
       case 1: Object.assign(P, { lua:-0.3, lla:1.75, rua:0.3, rla:-1.75, lut:-0.16, rut:0.16 }); break;                       // arms crossed
       case 2: { const sh = Math.sin(time*40)*0.02; Object.assign(P, { lua:-0.6-sh, lla:0.55, rua:0.6+sh, rla:-0.55, lut:-0.55, lls:-0.05, rut:0.55, rls:0.05, bob:-5 + Math.sin(time*30)*0.8 }); break; } // power-up stance, fists at hips
@@ -50,7 +55,10 @@ const R = (() => {
       case 7: Object.assign(P, { lua:-0.3, lla:0.7, rua:0.3, rla:-0.7, lut:-0.04, rut:0.04, lls:-0.08, rls:0.08, float: 24 + Math.sin(time*1.1)*4 }); break;           // master: hands behind back
       case 8: Object.assign(P, { lua:-2.35, lla:-2.6, rua:2.35, rla:2.6, lut:-0.06, lls:0.2, rut:0.06, rls:-0.2, float: 32 + Math.sin(time*1.2)*6, head:-0.25 }); break; // V to the heavens
       case 9: Object.assign(P, { lua:-0.08-br, lla:-0.04, rua:0.08+br, rla:0.04, lut:-0.04, lls:0.12, rut:0.04, rls:-0.12, float: 36 + Math.sin(time*0.9)*7, head:0.35 }); break; // limp void float
-      default: Object.assign(P, { lua:-0.3, lla:1.75, rua:0.3, rla:-1.75, lut:-0.05, lls:0.15, rut:0.05, rls:-0.15, float: 40 + Math.sin(time)*6 }); // unlimited: floating arms crossed
+      case 10: Object.assign(P, { lua:-0.35, lla:0.9, rua:1.55, rla:1.6, lut:-0.1, lls:0.1, rut:0.12, rls:-0.05, float: 42 + Math.sin(time*1.1)*5, head:-0.1 }); break; // eclipse: palm thrust forward
+      case 11: Object.assign(P, { lua:-0.7, lla:2.3, rua:0.7, rla:-2.3, lut:-1.3, lls:1.95, rut:1.3, rls:-1.95, float: 46 + Math.sin(time*0.8)*6, head:0.05 }); break; // paradox: floating meditation, prayer hands
+      case 12: Object.assign(P, { lua:-2.0, lla:-2.2, rua:2.0, rla:2.2, lut:-0.04, lls:0.3, rut:0.04, rls:-0.3, float: 50 + Math.sin(time*0.9)*7, head:-0.35 }); break; // final: arms open to the sky
+      default: Object.assign(P, { lua:-0.3, lla:1.75, rua:0.3, rla:-1.75, lut:-0.05, lls:0.15, rut:0.05, rls:-0.15, float: 48 + Math.sin(time)*6 }); // layers: floating arms crossed
     }
     return P;
   }
@@ -103,8 +111,10 @@ const R = (() => {
 
   // ---------------- Aura ----------------
   const skinCache = {};
-  function auraStyle(t, as){ const base = AURA[tierOf(t)]; if (!as || as === 'realm' || typeof AURA_SKINS === 'undefined') return base;
-    const k = tierOf(t) + ':' + as; if (skinCache[k]) return skinCache[k]; const sk = AURA_SKINS.find(a => a.id === as); if (!sk || !sk.over) return base;
+  const p2Cache = {};
+  function realmAura(t){ const ti = tierOf(t); if (subOf(t) < 11 || !AURA_P2[ti] || !Object.keys(AURA_P2[ti]).length) return AURA[ti]; return p2Cache[ti] || (p2Cache[ti] = Object.assign({}, AURA[ti], AURA_P2[ti])); }
+  function auraStyle(t, as){ const base = realmAura(t); if (!as || as === 'realm' || typeof AURA_SKINS === 'undefined') return base;
+    const k = tierOf(t) + ':' + (subOf(t) >= 11 ? 2 : 1) + ':' + as; if (skinCache[k]) return skinCache[k]; const sk = AURA_SKINS.find(a => a.id === as); if (!sk || !sk.over) return base;
     return (skinCache[k] = Object.assign({ size: base.size, alpha: Math.max(0.6, base.alpha), tongues: base.tongues, pulse: base.pulse }, sk.over)); }
   function auraColor(t, time, light, A_){ const A = A_ || auraStyle(t); const h = A.rainbow ? (time*90) % 360 : A.h; return hsl(h, A.s, light||A.l); }
 
@@ -129,7 +139,7 @@ const R = (() => {
   // ch: { parts:[], lastLight, ... } per-character fx state
   function auraBack(ctx, x, y, sc, t, time, moving, ch, P){
     const A = ch.A || auraStyle(t), tier = tierOf(t), sub = subOf(t);
-    const k = (A.size + sub*0.012*(tier+1)) * sc * (moving ? 1.08 : 1);
+    const k = (A.size + sub*0.012*Math.min(tier+1, 10)) * sc * (moving ? 1.08 : 1);
     const fl = (P.float||0)*sc;
     const cx = x, cy = y - fl - 34*sc, w = 30*k, h = 46*k;
     const intensity = Math.min(1, A.alpha * (0.55 + sub/40));
@@ -186,8 +196,15 @@ const R = (() => {
     }
     // flame layers
     const layers = [ [1.35, 0.3], [1.0, 0.45], [0.72, 0.6] ];
+    if (A.dual) { // v1.4 paradox: two-colour split aura
+      layers.forEach(([s, a], i) => { for (const side of [-1, 1]) { ctx.save(); ctx.beginPath(); ctx.rect(side < 0 ? cx - 1e4 : cx, cy - 1e4, 1e4, 2e4); ctx.clip();
+        flameShape(ctx, cx, cy, w*s, h*s, time*(1 + i*0.25)*(side < 0 ? 1 : -1), A.tongues, i*1.7 + (side < 0 ? 0 : 5), 0.65 + Math.min(tier, 10)*0.06);
+        const hh = side < 0 ? A.h : A.h2; const fg = ctx.createRadialGradient(cx, cy + h*0.15, 0, cx, cy, h*s*1.9);
+        fg.addColorStop(0, hsl(hh, 100, 70, a*0.15)); fg.addColorStop(0.45, hsl(hh, 100, 66, a*0.95*intensity)); fg.addColorStop(0.8, hsl(hh, 100, 45, a*0.4)); fg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = fg; ctx.fill(); ctx.restore(); } });
+    } else
     layers.forEach(([s, a], i) => {
-      flameShape(ctx, cx, cy, w*s, h*s, time*(1 + i*0.25), A.tongues, i*1.7 + (ch.seed||0), 0.55 + tier*0.06);
+      flameShape(ctx, cx, cy, w*s, h*s, time*(1 + i*0.25), A.tongues, i*1.7 + (ch.seed||0), 0.55 + Math.min(tier, 10)*0.06);
       const fg = ctx.createRadialGradient(cx, cy + h*0.15, 0, cx, cy, h*s*1.9);
       const bright = A.l > 80 ? 0.55 : 1;
       if (A.darkCore) { fg.addColorStop(0, 'rgba(0,0,0,0)'); fg.addColorStop(0.35, hsl(hue, A.s, 45, a*intensity)); fg.addColorStop(1, hsl(ohue, A.os, 20, 0)); }
@@ -213,6 +230,7 @@ const R = (() => {
     // stars orbit back half
     if (A.stars) orbitStars(ctx, cx, cy, w, h, time, sc, true);
     if (A.infinity) infinity(ctx, cx, cy, w, h, time, sc, hue, true);
+    if (R.auraExtra) R.auraExtra(ctx, A, cx, cy, w, h, sc, time, hue, true, x, y);
     ctx.restore();
     // particles
     fxParticles(ctx, x, y, cx, cy, w, h, sc, A, time, moving, ch, hue, intensity);
@@ -220,7 +238,7 @@ const R = (() => {
 
   function auraFront(ctx, x, y, sc, t, time, moving, ch, P){
     const A = ch.A || auraStyle(t), tier = tierOf(t), sub = subOf(t);
-    const k = (A.size + sub*0.012*(tier+1)) * sc * (moving ? 1.08 : 1);
+    const k = (A.size + sub*0.012*Math.min(tier+1, 10)) * sc * (moving ? 1.08 : 1);
     const fl = (P.float||0)*sc, cx = x, cy = y - fl - 34*sc, w = 30*k, h = 46*k;
     const hue = A.rainbow ? (time*90) % 360 : A.h;
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -229,6 +247,7 @@ const R = (() => {
     ctx.fillStyle = hsl(hue, A.s, Math.min(95, A.l + 10), 0.10 * A.alpha); ctx.fill();
     if (A.stars) orbitStars(ctx, cx, cy, w, h, time, sc, false);
     if (A.infinity) infinity(ctx, cx, cy, w, h, time, sc, hue, false);
+    if (R.auraExtra) R.auraExtra(ctx, A, cx, cy, w, h, sc, time, hue, false, x, y);
     // lightning
     const lightningOn = A.lightning || (A.lightningFrom && sub >= A.lightningFrom);
     if (lightningOn) {
@@ -299,11 +318,14 @@ const R = (() => {
     const A = c.fx.A;
     const isVoid = A.void && t <= MAX_TITLE && !(SK && SK.body);
     ctx.save(); if (c.face < 0) { ctx.translate(x, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
+    if (A.afterimage) { ctx.save(); for (let k = 1; k <= 2; k++) { const o = Math.sin(time*1.7 + k*2)*10*k*sc; ctx.globalAlpha = 0.28/k;
+      stickman(ctx, x + o, y - Math.cos(time*1.3 + k)*4*sc, sc, P, { color: hsl(k === 1 ? A.h : (A.h2 || A.oh), 100, 70), outline: false, headFill: 'rgba(0,0,0,0)' }); } ctx.restore(); }
     if (A.glitch && Math.random() < 0.3) { const o = rnd(2, 5)*sc; stickman(ctx, x - o, y, sc, P, { color: 'rgba(0,255,255,0.5)' }); stickman(ctx, x + o, y, sc, P, { color: 'rgba(255,0,140,0.5)' }); }
     const eye = tier >= 2 ? (isVoid ? '#fff' : auraColor(t, time, 80, A)) : null;
     const acc = SK ? SK.acc : [], hair = tier >= 2 ? auraColor(t, time, 70, A) : '#1a1a1a';
-    const g = stickman(ctx, x, y, sc, P, { outlineColor: SK && SK.outline ? SK.outline : (isVoid ? 'rgba(200,140,255,0.8)' : null), color: SK && SK.body ? SK.body : (isVoid ? '#0a0010' : (tier >= 8 ? '#fffbe8' : '#f2f2f2')),
-      headFill: isVoid ? '#000' : '#121212', eyes: (acc.includes('shades') || acc.includes('fox')) ? null : eye, glow: tier >= 3 ? auraColor(t, time, null, A) : null, smile: c.smile,
+    const MR = c.mirror; // v1.5: your Reflection (dark copy, red eyes, a smile)
+    const g = stickman(ctx, x, y, sc, P, { outlineColor: MR ? 'rgba(255,40,70,0.9)' : SK && SK.outline ? SK.outline : (isVoid ? 'rgba(200,140,255,0.8)' : null), color: MR ? '#0a0a10' : SK && SK.body ? SK.body : (isVoid ? '#0a0010' : (tier >= 8 ? '#fffbe8' : '#f2f2f2')),
+      headFill: MR ? '#000' : isVoid ? '#000' : '#121212', eyes: MR ? '#ff2a40' : (acc.includes('shades') || acc.includes('fox')) ? null : eye, glow: MR ? '#ff2040' : tier >= 3 ? auraColor(t, time, null, A) : null, smile: c.smile || MR,
       before: acc.length && R.skinBack ? geo => R.skinBack(ctx, geo, acc, time, hair) : null, after: acc.length && R.skinFront ? geo => R.skinFront(ctx, geo, acc, time, hair, eye) : null });
     ctx.restore();
     auraFront(ctx, x, y, sc, t, time + (c.seed||0), c.moving, c.fx, P);
