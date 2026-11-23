@@ -5,6 +5,7 @@ const Net = (() => {
   const ROOT = 'godk1';
   const cbs = { players: ()=>{}, duel: ()=>{}, lb: ()=>{} };
   let players = {}; // id -> data
+  let timeOff = 0; // server clock offset (Firebase) — fixes PvP requests on devices with wrong clocks
   let refs = [];
   let bc = null, localTimer = null;
 
@@ -18,6 +19,7 @@ const Net = (() => {
         await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
         await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js');
         firebase.initializeApp(cfg); db = firebase.database(); mode = 'firebase';
+        db.ref('.info/serverTimeOffset').on('value', s => { timeOff = s.val() || 0; });
         // global leaderboard listener
         db.ref(`${ROOT}/lb`).orderByChild('s').limitToLast(50).on('value', snap => {
           const arr = []; snap.forEach(c => { arr.push(Object.assign({ id: c.key }, c.val())); }); cbs.lb(arr);
@@ -98,6 +100,12 @@ const Net = (() => {
     else { localDuels[id] = Object.assign(localDuels[id]||{}, d); const full = Object.assign({}, localDuels[id]);
       bc.postMessage({ type: 'duel', room, from: myId, id, d: full }); setTimeout(()=>cbs.duel(id, full), 0); }
   }
+  // create a duel with set() (full object, server timestamp)
+  function duelCreate(id, d){
+    if (!room) return;
+    if (mode === 'firebase') db.ref(`${ROOT}/rooms/${room}/duels/${id}`).set(Object.assign({}, d, { ts: firebase.database.ServerValue.TIMESTAMP }));
+    else duelWrite(id, Object.assign({}, d, { ts: Date.now() }));
+  }
   function duelRemove(id){ if (mode === 'firebase' && room) db.ref(`${ROOT}/rooms/${room}/duels/${id}`).remove(); }
 
   function pushLB(entry){
@@ -113,7 +121,7 @@ const Net = (() => {
   }
 
   return {
-    init, listRooms, join, sendMe, duelWrite, duelRemove, pushLB, leave,
+    init, listRooms, join, sendMe, duelWrite, duelCreate, duelRemove, pushLB, leave, now: () => Date.now() + timeOff,
     on(ev, f){ cbs[ev] = f; },
     get mode(){ return mode; }, get room(){ return room; }, get players(){ return players; },
   };

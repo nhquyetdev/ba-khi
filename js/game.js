@@ -10,7 +10,7 @@
 
   // ---------------- Save ----------------
   const uid = () => 'p' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
-  const DEF = () => ({ v: 1, id: uid(), name: '', lang: (navigator.language||'').startsWith('vi') ? 'vi' : 'en', L: 1, xp: 0, t: 1, R: 0, E: 0, best: 1, stelae: [], wells: [], pvpW: 0, muted: false, vol: { m: 0.5, s: 0.8, a: 0.5 }, roamCD: {}, playSec: 0, marks: 0, riftCD: {}, riftSeen: [], buffUntil: 0, buffEv: -1 });
+  const DEF = () => ({ v: 1, id: uid(), name: '', lang: (navigator.language||'').startsWith('vi') ? 'vi' : 'en', L: 1, xp: 0, t: 1, R: 0, E: 0, best: 1, stelae: [], wells: [], pvpW: 0, muted: false, vol: { m: 0.5, s: 0.8, a: 0.5 }, roamCD: {}, stats: {}, as: 'realm', sk: 'classic', nk: 'none', unlocks: [], pvpCD: 0, playSec: 0, marks: 0, riftCD: {}, riftSeen: [], buffUntil: 0, buffEv: -1 });
   let S;
   function load(){ try { const o = JSON.parse(localStorage.getItem(SAVE_KEY)); S = Object.assign(DEF(), o || {}); } catch(e) { S = DEF(); } }
   function save(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch(e){} }
@@ -108,16 +108,16 @@
   $('leaveBtn').onclick = () => { Net.leave(); for (const k in others) delete others[k]; scene = 'lobby'; $('hud').style.display = 'none'; $('lobby').style.display = 'flex'; $('langBtn').style.display = ''; closeModal(); refreshRooms(); };
 
   // ---------------- Net glue ----------------
-  const meNet = () => ({ n: S.name, x: Math.round(me.x), y: Math.round(me.y), t: S.t, l: S.L, r: S.R, mv: me.moving ? 1 : 0, f: me.face, host: isHost ? 1 : 0, pw: S.pvpW });
+  const meNet = () => ({ n: S.name, x: Math.round(me.x), y: Math.round(me.y), t: S.t, l: S.L, r: S.R, mv: me.moving ? 1 : 0, f: me.face, host: isHost ? 1 : 0, pw: S.pvpW, sk: S.sk, as: S.as, nk: S.nk });
   Net.on('players', ps => {
     for (const id in ps) { const p = ps[id]; const o = others[id] || (others[id] = { x: p.x, y: p.y, fx: {}, phase: 0, seed: Math.random()*10 });
-      Object.assign(o, { tx: p.x, ty: p.y, t: p.t || 1, n: p.n || '?', l: p.l || 1, r: p.r || 0, mv: p.mv, f: p.f || 1, host: p.host, pw: p.pw || 0 }); }
+      Object.assign(o, { tx: p.x, ty: p.y, t: p.t || 1, n: p.n || '?', l: p.l || 1, r: p.r || 0, mv: p.mv, f: p.f || 1, host: p.host, pw: p.pw || 0, sk: p.sk || 'classic', as: p.as || 'realm', nk: p.nk || 'none' }); }
     for (const id in others) if (!ps[id]) delete others[id];
     renderRoomList();
   });
   let lbData = [];
   Net.on('lb', arr => { lbData = arr; if (lbTab === 'world') renderLB(); });
-  function pushLB(){ Net.pushLB({ n: S.name || '?', t: S.t, l: S.L, r: S.R, s: S.t*1e6 + S.L }); }
+  function pushLB(){ Net.pushLB({ n: S.name || '?', t: S.t, l: S.L, r: S.R, s: S.t*1e6 + S.L, nk: S.nk || 'none' }); }
 
   // ---------------- HUD ----------------
   let lastHUD = '';
@@ -180,18 +180,18 @@
     const canDuel = !p.offline && others[p.id] && scene === 'world';
     modal(`<h2 class="${titleCss(p.t)}" style="color:${titleColor(p.t)}">${esc(tn(p.t))}</h2>
       <div class="muted">${esc(tierName(p.t, S.lang))}</div>
-      <div class="big">${esc(p.n)}</div>
+      <div class="big">${esc(p.n)}</div>${p.nk && p.nk !== 'none' ? `<div style="color:#ffd98a;font-style:italic">「${esc(byId(NICKS, p.nk)[S.lang])}」</div>` : ''}
       <table class="st"><tr><td>${T('level')}</td><td>${lv}</td></tr>
       <tr><td>${T('rebirths')}</td><td>${behind ? '????' : (p.r || 0)}</td></tr>
       ${p.pw !== undefined ? `<tr><td>${T('pvpWins')}</td><td>${behind ? '????' : p.pw}</td></tr>` : ''}</table>
       ${behind ? `<p class="muted"><i>${T('hiddenLv')}</i></p>` : ''}
       <canvas id="prevCv" width="220" height="200"></canvas>
-      <div class="row">${canDuel ? `<button class="btn red" id="duelBtn">⚔ ${T('challenge')}</button>` : ''}<button class="btn" data-close>${T('close')}</button></div>`);
-    previewChar(p.t);
+      <div class="row">${canDuel ? (pvpCDLeft() > 0 ? `<button class="btn" disabled>⏳ ${mmss(pvpCDLeft())}</button>` : `<button class="btn red" id="duelBtn">⚔ ${T('challenge')}</button>`) : ''}<button class="btn" data-close>${T('close')}</button></div>`);
+    previewChar(p.t, p.sk, p.as);
     if (canDuel) $('duelBtn').onclick = () => { challenge(p.id); closeModal(); };
   }
   let prevRAF = null;
-  function previewChar(t){ const c = $('prevCv'); if (!c) return; const x = c.getContext('2d'); const ch = { t, moving: false, fx: {}, face: 1, seed: 1 };
+  function previewChar(t, sk, as){ const c = $('prevCv'); if (!c) return; const x = c.getContext('2d'); const ch = { t, moving: false, fx: {}, face: 1, seed: 1, sk, as }; window.__prevCh = ch;
     cancelAnimationFrame(prevRAF); const loop = () => { if (!document.body.contains(c)) return; x.clearRect(0, 0, c.width, c.height); x.fillStyle = '#0a0810'; x.fillRect(0, 0, c.width, c.height);
       R.character(x, c.width/2, c.height - 28, 1.05, ch, time); prevRAF = requestAnimationFrame(loop); }; loop(); }
 
@@ -201,7 +201,7 @@
       <table class="st">
       <tr><td>${T('level')}</td><td>${S.L} / ${F.levelCap(S.t)}</td></tr>
       <tr><td>❤ ${T('hp')}</td><td>${fmt(st.hp)}</td></tr><tr><td>🔥 ${T('atk')}</td><td>${fmt(st.atk)}</td></tr>
-      <tr><td>🛡 ${T('def')}</td><td>${fmt(st.def)}</td></tr><tr><td>✴ ${T('crit')}</td><td>${(st.crit*100).toFixed(1)}%</td></tr>
+      <tr><td>🛡 ${T('def')}</td><td>${fmt(st.def)}</td></tr><tr><td>✴ ${T('crit')}</td><td>${(st.crit*100).toFixed(1)}%</td></tr><tr><td>👟 ${T('speed')}</td><td>${Math.round(F.speed(S.t))}</td></tr>
       ${S.R ? `<tr><td>✦ ${T('rebirths')}</td><td>${S.R}</td></tr><tr><td>💠 ${T('essence')}</td><td>${S.E}</td></tr>` : ''}
       <tr><td>📈 ${T('xpBonus')}</td><td>×${((1 + S.R)*(1 + 0.05*S.stelae.length)*(1 + 0.01*(S.marks||0))).toFixed(2)}</td></tr>
       ${S.stelae.length ? `<tr><td>🗿 ${T('stelae')}</td><td>${S.stelae.length} / ${STELAE.length}</td></tr>` : ''}
@@ -256,6 +256,28 @@
       try { const o = JSON.parse(decodeURIComponent(escape(atob(b.value.trim())))); if (typeof o.t !== 'number' || typeof o.L !== 'number') throw 0; S = Object.assign(DEF(), o); save(); toast(T('importOk')); refreshHUD(true); pushLB(); closeModal(); } catch(e) { toast(T('importBad')); } };
     $('sLeave').onclick = () => $('leaveBtn').onclick();
   };
+  // ---------------- v1.3 Wardrobe & unlocks ----------------
+  const COS = { aura: [AURA_SKINS, 'as', 'tabAura'], nick: [NICKS, 'nk', 'tabNick'], skin: [SKINS, 'sk', 'tabSkin'] };
+  let wTab = 'skin', unlockT = 0;
+  function openWardrobe(){
+    const [list, key] = COS[wTab];
+    let h = `<h2>🎭 ${T('wardrobe')}</h2><canvas id="prevCv" width="220" height="210"></canvas>
+      <div class="tabs wtabs">${Object.keys(COS).map(k => `<button data-wt="${k}" class="${k === wTab ? 'on' : ''}">${T(COS[k][2])}</button>`).join('')}</div><div class="wGrid">`;
+    for (const it of list) { const ok = reqMet(S, it.req), on = S[key] === it.id; const [c, v] = reqProgress(S, it.req);
+      h += `<button class="wItem${on ? ' on' : ''}${ok ? '' : ' lockedW'}" data-id="${it.id}" ${ok ? '' : 'disabled'}><b>${ok ? '' : '🔒 '}${esc(it[S.lang])}</b>
+        <small>${on ? '✔ ' + T('equipped') : ok ? T('equip') : esc(reqText(it.req, S.lang)) + (it.req[0] !== 'best' ? ` (${Math.min(c, v) >= 1000 ? Math.floor(Math.min(c, v)/1000) + 'K' : Math.floor(Math.min(c, v))}/${v >= 1000 ? v/1000 + 'K' : v})` : '')}</small></button>`; }
+    h += `</div><div class="row"><button class="btn" data-close>${T('close')}</button></div>`;
+    modal(h); previewChar(S.t, S.sk, S.as);
+    document.querySelectorAll('[data-wt]').forEach(b => b.onclick = () => { wTab = b.dataset.wt; openWardrobe(); });
+    document.querySelectorAll('.wItem:not([disabled])').forEach(b => b.onclick = () => { S[key] = b.dataset.id; save(); Net.sendMe(meNet(), true); pushLB(); openWardrobe(); });
+  }
+  $('btnWardrobe').onclick = openWardrobe;
+  function unlockTick(){
+    if (scene === 'lobby' || Date.now() - unlockT < 2500) return; unlockT = Date.now(); S.unlocks = S.unlocks || [];
+    if (!S.unlocks.length) { for (const k in COS) for (const it of COS[k][0]) if (reqMet(S, it.req)) S.unlocks.push(k + ':' + it.id); save(); return; } // first run: no spam
+    for (const k in COS) for (const it of COS[k][0]) { const id = k + ':' + it.id; if (!S.unlocks.includes(id) && reqMet(S, it.req)) { S.unlocks.push(id); save(); sfx.find();
+      toast(`🎁 ${esc(T('unlockedNew').replace('{n}', it[S.lang]))} <small>(${T(COS[k][2])})</small>`, 5000); } }
+  }
   $('btnSupport').onclick = () => modal(`<h2>💖 ${T('support')}</h2><div class="row col">
     <a class="btn gold" href="https://ko-fi.com/lichstream" target="_blank" rel="noopener">☕ Ko-fi — LichStream</a>
     <a class="btn red" href="https://www.youtube.com/@LichStream" target="_blank" rel="noopener">▶ YouTube — @LichStream</a></div>
@@ -269,7 +291,7 @@
 
   // ---------------- Progress ----------------
   function gainXP(dt){
-    if (capped()) { S.xp = 0; return; }
+    if (capped()) { S.xp = 0; if (scene === 'world') tryAutoBreak(); return; }
     S.xp += F.xpRate(S, me.moving, inWell(), buffOn()) * dt;
     let lv = false;
     while (!capped() && S.xp >= F.xpNeed(S.L)) { S.xp -= F.xpNeed(S.L); S.L++; lv = true; }
@@ -279,16 +301,17 @@
   }
   function titleUp(fromGate){
     const oldTier = tierOf(S.t); S.t += 1; if (S.t > S.best) { const first = S.t > MAX_TITLE && S.best <= MAX_TITLE; S.best = S.t; if (first) setTimeout(()=>toast('∞ ' + T('beyondUnlocked'), 6000), 2500); }
-    S.xp = 0; save(); pushLB(); sfx.title(); flash(titleColor(S.t), tierOf(S.t) !== oldTier ? 1 : 0.5);
+    S.xp = 0; save(); pushLB(); sfx.title(); flash(titleColor(S.t), tierOf(S.t) !== oldTier ? 1 : (fromGate ? 0.5 : 0.2));
     bigBanner(tierOf(S.t) !== oldTier ? `${T('newTitle')} · ${tierName(S.t, S.lang)}` : T('newTitle'), tn(S.t), titleColor(S.t), titleCss(S.t));
     refreshHUD(true); Net.sendMe(meNet(), true);
   }
   // already-conquered gates shatter automatically if you clearly overpower them
+  // v1.3 QoL: every Dungeon Gate you have already conquered is passed automatically (no fight)
+  let skipToastT = 0;
   function tryAutoBreak(){
     if (S.t >= S.best || !capped()) return;
-    const p = myStats(), b = F.boss(S.t);
-    const pT = b.hp / (F.dmg(p.atk, b.def)*1.15), bT = p.hp / F.dmg(b.atk, p.def);
-    if (pT < bT*0.9) { toast('💥 ' + T('gateBroken') + '!'); titleUp(false); }
+    if (Date.now() - skipToastT > 4000) { skipToastT = Date.now(); toast('💥 ' + T('gateSkip')); }
+    titleUp(false);
   }
 
   // ---------------- Interact / Gate ----------------
@@ -325,7 +348,7 @@
     const { g, B, st } = o;
     const hue = (B.hue + (g%20)*7) % 360;
     fight = { kind: o.kind, riftI: o.i, g, B, rng: Math.random, hue, form: o.form, jump: o.jump, aBoost: 0, transformed: false,
-      L: { name: S.name, t: S.t, st: myStats(), hp: 0, fx: {}, hurt: 0, atk: 0 },
+      L: { name: S.name, t: S.t, st: myStats(), hp: 0, fx: {}, hurt: 0, atk: 0, sk: S.sk, as: S.as },
       Rt: { name: bossName(B, o.form), st, hp: 0, hurt: 0, atk: 0, fx: {} },
       phase: 'intro', timer: 0, round: 0, beams: [], nums: [], intro: B.intro[S.lang], result: null };
     fight.L.hp = fight.L.st.hp; fight.Rt.hp = st.hp;
@@ -335,8 +358,8 @@
   function startPvP(d, myRole){
     const a = d.sa, b = d.sb;
     fight = { kind: 'pvp', rng: mulberry(d.seed), myRole, did: d.id,
-      L: { name: a.n, t: a.t, st: a, hp: a.hp, fx: {}, hurt: 0, atk: 0 },
-      Rt: { name: b.n, t: b.t, st: b, hp: b.hp, fx: {}, hurt: 0, atk: 0 },
+      L: { name: a.n, t: a.t, st: a, hp: a.hp, fx: {}, hurt: 0, atk: 0, sk: a.sk, as: a.as },
+      Rt: { name: b.n, t: b.t, st: b, hp: b.hp, fx: {}, hurt: 0, atk: 0, sk: b.sk, as: b.as },
       phase: 'intro', timer: 0, round: 0, beams: [], nums: [], intro: [`${a.n}  ⚔  ${b.n}`, T('fightStart') + '!'], result: null };
     scene = 'fight'; $('hud').classList.add('dim'); $('fightUI').style.display = 'block'; closeModal(); sfx.beat();
   }
@@ -372,16 +395,16 @@
   }
   function finishFight(){
     const f = fight; fight = null; scene = 'world'; $('hud').classList.remove('dim'); $('fightUI').style.display = 'none';
-    if (f.kind === 'boss') { me.x = GATE.x; me.y = GATE.y + 200; if (f.result) titleUp(true); }
+    if (f.kind === 'boss') { me.x = GATE.x; me.y = GATE.y + 200; if (f.result) { S.stats.bossWins = (S.stats.bossWins || 0) + 1; titleUp(true); } }
     else if (f.kind === 'roam') { S.roamCD = S.roamCD || {}; S.roamCD[f.riftI] = Date.now() + (f.result ? ROAM_CD : RIFT_CD_LOSE); me.y += 120;
-      if (f.result) { let xp = F.xpRate(S, true, false, false) * ROAM_XP_SEC; const got = xp;
+      if (f.result) { S.stats.roamWins = (S.stats.roamWins || 0) + 1; let xp = F.xpRate(S, true, false, false) * ROAM_XP_SEC; const got = xp;
         while (!capped() && xp > 0) { const need = F.xpNeed(S.L) - S.xp; if (xp >= need) { xp -= need; S.xp = 0; S.L++; } else { S.xp += xp; xp = 0; } }
         if (capped()) S.xp = 0; const mark = Math.random() < 0.25 && (S.marks||0) < MAX_MARKS; if (mark) S.marks = (S.marks||0) + 1;
         toast('☠ ' + (mark ? T('roamWinMark') : T('roamWin')).replace('{x}', fmt(got)), 4500); sfx.lvl(); pushLB(); }
       save(); }
     else if (f.kind === 'rift') { const [rx, ry, rk] = RIFTS[f.riftI]; me.x = rx; me.y = ry + 160; S.riftCD = S.riftCD || {};
       S.riftCD[f.riftI] = Date.now() + (f.result ? RIFT_CD_WIN : RIFT_CD_LOSE);
-      if (f.result) { const RK = RIFT_RANKS[rk]; let xp = F.xpRate(S, true, false, false) * RK.xpSec; const got = xp; let ups = 0;
+      if (f.result) { S.stats.riftWins = (S.stats.riftWins || 0) + 1; const RK = RIFT_RANKS[rk]; let xp = F.xpRate(S, true, false, false) * RK.xpSec; const got = xp; let ups = 0;
         while (!capped() && xp > 0) { const need = F.xpNeed(S.L) - S.xp; if (xp >= need) { xp -= need; S.xp = 0; S.L++; ups++; } else { S.xp += xp; xp = 0; } }
         if (capped()) S.xp = 0; const markGot = (S.marks||0) < MAX_MARKS; if (markGot) S.marks = (S.marks||0) + 1;
         toast('⛩ ' + (markGot ? T('riftWin') : T('riftMaxMarks')).replace('{x}', fmt(got)), 4500); if (ups) sfx.lvl(); pushLB(); }
@@ -390,28 +413,49 @@
     refreshHUD(true);
   }
 
-  // PvP protocol
-  const duels = {}; let pendingOut = null;
-  function snap(){ const s = myStats(); return { n: S.name, t: S.t, hp: s.hp, atk: s.atk, def: s.def, crit: s.crit }; }
+  // PvP protocol (v1.3: server time, persistent request card, queue while busy, 60s cooldown after refusal)
+  const duels = {}; let pendingOut = null; const inbox = {}; let pendingStart = null;
+  function snap(){ const s = myStats(); return { n: S.name, t: S.t, hp: s.hp, atk: s.atk, def: s.def, crit: s.crit, sk: S.sk, as: S.as }; }
+  const pvpCDLeft = () => Math.max(0, (S.pvpCD || 0) - Date.now());
+  function pvpCooldown(msg){ S.pvpCD = Date.now() + PVP_COOLDOWN; save(); if (msg) toast('⏳ ' + msg, 4000); }
   function challenge(targetId){
+    if (pvpCDLeft() > 0) { toast('⏳ ' + T('pvpCooldown').replace('{t}', mmss(pvpCDLeft()))); return; }
+    if (pendingOut) { toast('⚔ ' + T('pvpWaiting')); return; }
     const id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-    pendingOut = id; Net.duelWrite(id, { a: S.id, b: targetId, st: 'req', sa: snap(), ts: Date.now() }); toast('⚔ ' + T('pvpWaiting'));
-    setTimeout(() => { if (pendingOut === id) { pendingOut = null; Net.duelRemove(id); } }, 30000);
+    pendingOut = { id, at: Date.now(), seen: false };
+    Net.duelCreate(id, { a: S.id, b: targetId, st: 'req', sa: snap() }); toast('⚔ ' + T('pvpWaiting'));
+  }
+  function renderPvpCard(){
+    const el = $('pvpCard'); const now = Net.now();
+    for (const k in inbox) if (now - (inbox[k].ts || now) > PVP_REQ_TTL || duels[k] && duels[k].st !== 'req') delete inbox[k];
+    const ids = Object.keys(inbox); if (!ids.length || scene !== 'world') { if (el.style.display !== 'none') el.style.display = 'none'; return; }
+    const d = inbox[ids[0]], left = PVP_REQ_TTL - (now - (d.ts || now));
+    const key = ids[0] + ':' + Math.ceil(left/1000) + S.lang;
+    if (el.dataset.k === key) return; el.dataset.k = key; el.style.display = 'block';
+    el.innerHTML = `<div class="pTitle">⚔ PvP</div><div class="big">${esc(T('pvpReq').replace('{n}', d.sa.n || '?'))}</div>
+      <div class="${titleCss(d.sa.t)}" style="color:${titleColor(d.sa.t)};font-weight:800">${esc(tn(d.sa.t))}</div><div class="muted small">⏳ ${mmss(left)}</div>
+      <div class="row"><button class="btn red" data-acc="${esc(ids[0])}">${T('accept')}</button><button class="btn" data-dec="${esc(ids[0])}">${T('decline')}</button></div>`;
+    el.querySelector('[data-acc]').onclick = () => { const id = ids[0]; delete inbox[id]; Net.duelWrite(id, { st: 'acc', sb: snap(), seed: Math.floor(Math.random()*1e9) }); el.style.display = 'none'; el.dataset.k = ''; };
+    el.querySelector('[data-dec]').onclick = () => { const id = ids[0]; delete inbox[id]; Net.duelWrite(id, { st: 'dec' }); el.style.display = 'none'; el.dataset.k = ''; };
+  }
+  function pvpTick(){
+    renderPvpCard();
+    if (pendingOut && Date.now() - pendingOut.at > PVP_REQ_TTL + 2000) { const id = pendingOut.id; pendingOut = null; Net.duelRemove(id); pvpCooldown(T('pvpTimeout')); }
+    if (pendingStart && scene === 'world') { const p = pendingStart; pendingStart = null; if (Net.now() - (p.d.ts || 0) < PVP_REQ_TTL + 60000) startPvP(p.d, p.role); }
   }
   Net.on('duel', (id, d) => {
     if (!d) return; d.id = id; const prev = duels[id]; duels[id] = d;
-    if (d.st === 'req' && d.b === S.id && (!prev || prev.st !== 'req') && Date.now() - (d.ts||0) < 30000) {
-      if (scene !== 'world') { Net.duelWrite(id, { st: 'dec' }); return; }
-      const nm = (d.sa && d.sa.n) || '?';
-      modal(`<h2>⚔ PvP</h2><p class="big">${esc(T('pvpReq').replace('{n}', nm))}</p><p style="color:${titleColor(d.sa.t)}" class="${titleCss(d.sa.t)}">${esc(tn(d.sa.t))}</p>
-        <div class="row"><button class="btn red" id="pvpAcc">${T('accept')}</button><button class="btn" id="pvpDec">${T('decline')}</button></div>`);
-      $('pvpAcc').onclick = () => { Net.duelWrite(id, { st: 'acc', sb: snap(), seed: Math.floor(Math.random()*1e9) }); closeModal(); };
-      $('pvpDec').onclick = () => { Net.duelWrite(id, { st: 'dec' }); closeModal(); };
+    if (d.st === 'req' && d.b === S.id && !inbox[id] && (!prev || prev.st !== 'req') && Net.now() - (d.ts || Net.now()) < PVP_REQ_TTL) {
+      inbox[id] = d; sfx.find(); Net.duelWrite(id, { seen: 1 });
+      if (scene !== 'world') toast('⚔ ' + esc(T('pvpReq').replace('{n}', (d.sa && d.sa.n) || '?')));
     }
-    if (d.st === 'acc' && d.sb && d.sa && (!prev || prev.st !== 'acc') && scene === 'world') {
-      if (d.a === S.id) { pendingOut = null; startPvP(d, 'a'); } else if (d.b === S.id) startPvP(d, 'b');
+    if (d.a === S.id && d.seen && pendingOut && pendingOut.id === id && !pendingOut.seen) { pendingOut.seen = true; const o = others[d.b]; toast('📨 ' + esc(T('pvpSeen').replace('{n}', o ? o.n : '?'))); }
+    if (d.st === 'acc' && d.sb && d.sa && (!prev || prev.st !== 'acc')) {
+      const role = d.a === S.id ? 'a' : d.b === S.id ? 'b' : null; if (!role) return;
+      if (role === 'a') pendingOut = null;
+      if (scene === 'world') startPvP(d, role); else pendingStart = { d, role };
     }
-    if (d.st === 'dec' && d.a === S.id && pendingOut === id) { pendingOut = null; toast(T('pvpDeclined')); Net.duelRemove(id); }
+    if (d.st === 'dec' && d.a === S.id && pendingOut && pendingOut.id === id) { pendingOut = null; Net.duelRemove(id); pvpCooldown(T('pvpDeclinedCD')); }
   });
 
   // ---------------- Picking ----------------
@@ -430,7 +474,7 @@
     if (keys['a'] || keys['arrowleft']) dx -= 1; if (keys['d'] || keys['arrowright']) dx += 1;
     if (joy.on && Math.hypot(joy.dx, joy.dy) > 8) { dx = joy.dx/60; dy = joy.dy/60; }
     const m = Math.hypot(dx, dy); me.moving = m > 0.1;
-    if (me.moving) { const sp = 260 + tierOf(S.t)*14; me.x += dx/Math.max(1, m)*sp*dt; me.y += dy/Math.max(1, m)*sp*dt; if (Math.abs(dx) > 0.1) me.face = dx > 0 ? 1 : -1; me.phase += dt*11; }
+    if (me.moving) { const sp = F.speed(S.t); me.x += dx/Math.max(1, m)*sp*dt; me.y += dy/Math.max(1, m)*sp*dt; S.stats.dist = (S.stats.dist || 0) + sp*dt*Math.min(1, m); if (Math.abs(dx) > 0.1) me.face = dx > 0 ? 1 : -1; me.phase += dt*11; }
     me.x = Math.max(-R.WORLD, Math.min(R.WORLD, me.x)); me.y = Math.max(-R.WORLD, Math.min(R.WORLD, me.y));
     gainXP(dt);
     // discoveries
@@ -440,7 +484,7 @@
     const ev = eventAt(Date.now());
     if (ev.active && S.buffEv !== ev.idx) {
       if (announcedEv !== ev.idx) { announcedEv = ev.idx; sfx.find(); toast('✨ ' + esc(T('eventSpawn').replace('{n}', ev.type[S.lang])), 6000); }
-      if (Math.hypot(me.x - ev.x, me.y - ev.y) < 95) { S.buffEv = ev.idx; S.buffUntil = Date.now() + ev.type.min*60000; if (ev.type.resetRifts) { S.riftCD = {}; setTimeout(()=>toast('🩸 ' + T('riftsReset')), 1500); }
+      if (Math.hypot(me.x - ev.x, me.y - ev.y) < 95) { S.buffEv = ev.idx; S.stats.events = (S.stats.events || 0) + 1; S.buffUntil = Date.now() + ev.type.min*60000; if (ev.type.resetRifts) { S.riftCD = {}; setTimeout(()=>toast('🩸 ' + T('riftsReset')), 1500); }
         save(); sfx.event(); flash(`hsl(${ev.type.h},100%,70%)`, 0.9); bigBanner(ev.type[S.lang], '×5', `hsl(${ev.type.h},100%,70%)`, '', T('eventGot').replace('{m}', ev.type.min)); }
     }
     RIFTS.forEach(([x, y], i) => { S.riftSeen = S.riftSeen || []; if (!S.riftSeen.includes(i) && Math.hypot(me.x - x, me.y - y) < 700) { S.riftSeen.push(i); save(); } });
@@ -476,8 +520,8 @@
         ctx.fillText(`☠ ${S.lang === 'vi' ? r.B.vi : r.B.en}`, sx, sy - sz*1.25 - 8); ctx.shadowBlur = 0; } }); } }
     const evw = eventAt(Date.now()); if (evw.active && vis(evw.x, evw.y, 500)) list.push({ y: evw.y, f: () => { const [sx, sy] = w2s(evw.x, evw.y); R.eventGate(ctx, sx, sy, cam.z, time, evw, evw.type[S.lang], S.buffEv === evw.idx); } });
     if (vis(GATE.x, GATE.y, 500)) list.push({ y: GATE.y, f: () => { const [sx, sy] = w2s(GATE.x, GATE.y); R.gate(ctx, sx, sy, cam.z, time, capped()); } });
-    for (const id in others) { const o = others[id]; if (!vis(o.x, o.y)) continue; list.push({ y: o.y, f: () => { const [sx, sy] = w2s(o.x, o.y); R.character(ctx, sx, sy, cam.z*1.25, o, time); nameTag(sx, sy, o.n, o.t, false); } }); }
-    list.push({ y: me.y, f: () => { const [sx, sy] = w2s(me.x, me.y); R.character(ctx, sx, sy, cam.z*1.25, Object.assign(me, { t: S.t }), time); nameTag(sx, sy, S.name, S.t, true); } });
+    for (const id in others) { const o = others[id]; if (!vis(o.x, o.y)) continue; list.push({ y: o.y, f: () => { const [sx, sy] = w2s(o.x, o.y); R.character(ctx, sx, sy, cam.z*1.25, o, time); nameTag(sx, sy, o.n, o.t, false, o.nk); } }); }
+    list.push({ y: me.y, f: () => { const [sx, sy] = w2s(me.x, me.y); R.character(ctx, sx, sy, cam.z*1.25, Object.assign(me, { t: S.t, sk: S.sk, as: S.as }), time); nameTag(sx, sy, S.name, S.t, true, S.nk); } });
     list.sort((a, b) => a.y - b.y); list.forEach(o => o.f());
     // floaters
     floaters = floaters.filter(f => (f.life -= dt) > 0); ctx.textAlign = 'center'; ctx.font = `bold 14px ${FONT}`;
@@ -492,12 +536,14 @@
     if (evw.active && S.buffEv !== evw.idx) arrow(evw.x, evw.y, `hsl(${evw.type.h},100%,65%)`);
     drawMinimap();
   }
-  function nameTag(sx, sy, n, t, isMe){
+  function nameTag(sx, sy, n, t, isMe, nk){
     const y = sy - 125*cam.z - Math.min(70, tierOf(t)*6)*cam.z;
     ctx.textAlign = 'center'; ctx.font = `${Math.max(10, 11*cam.z)}px ${FONT}`; const tw = Math.max(ctx.measureText(tn(t)).width, n.length*8*cam.z) + 14;
     ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(sx - tw/2, y - 14*cam.z, tw, 32*cam.z, 6) : ctx.rect(sx - tw/2, y - 14*cam.z, tw, 32*cam.z); ctx.fill();
     ctx.font = `bold ${Math.max(10, 12*cam.z)}px ${FONT}`; ctx.fillStyle = isMe ? '#fff' : '#ddd'; ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
-    ctx.fillText(n, sx, y); ctx.font = `${Math.max(10, 11*cam.z)}px ${FONT}`; ctx.fillStyle = R.auraStyle(t).rainbow ? `hsl(${(time*90)%360},100%,70%)` : titleColor(t); ctx.fillText(tn(t), sx, y + 14*cam.z); ctx.shadowBlur = 0;
+    ctx.fillText(n, sx, y); ctx.font = `${Math.max(10, 11*cam.z)}px ${FONT}`; ctx.fillStyle = R.auraStyle(t).rainbow ? `hsl(${(time*90)%360},100%,70%)` : titleColor(t); ctx.fillText(tn(t), sx, y + 14*cam.z);
+    if (nk && nk !== 'none') { ctx.font = `italic 700 ${Math.max(10, 11*cam.z)}px ${FONT}`; ctx.fillStyle = '#ffd98a'; ctx.fillText(`「${byId(NICKS, nk)[S.lang]}」`, sx, y - 19*cam.z); }
+    ctx.shadowBlur = 0;
   }
   function drawMinimap(){
     const s = mm.width, k = s/(R.WORLD*2); mctx.fillStyle = 'rgba(8,6,12,0.85)'; mctx.fillRect(0, 0, s, s);
@@ -544,16 +590,16 @@
       if (f.Rt.hurt > 0) burn(rx, floorY - S_*0.5, S_*0.3);
       if (f.result === true && f.phase === 'end' && f.timer < 1.8) burn(rx, floorY - S_*0.5, S_*0.5);
     } else {
-      R.character(ctx, rx - (f.Rt.atk > 0 ? f.Rt.atk*30 : 0), floorY, sc*1.3, { t: f.Rt.t, moving: false, fx: f.Rt.fx, face: -1, seed: 2 }, time);
+      R.character(ctx, rx - (f.Rt.atk > 0 ? f.Rt.atk*30 : 0), floorY, sc*1.3, { t: f.Rt.t, moving: false, fx: f.Rt.fx, face: -1, seed: 2, sk: f.Rt.sk, as: f.Rt.as }, time);
     }
     // left = player / challenger
-    R.character(ctx, lx + (f.L.atk > 0 ? f.L.atk*30 : 0), floorY, sc*1.3, { t: f.L.t, moving: false, fx: f.L.fx, face: 1, seed: 1 }, time);
+    R.character(ctx, lx + (f.L.atk > 0 ? f.L.atk*30 : 0), floorY, sc*1.3, { t: f.L.t, moving: false, fx: f.L.fx, face: 1, seed: 1, sk: f.L.sk, as: f.L.as }, time);
     if (f.L.hurt > 0) { ctx.fillStyle = 'rgba(255,0,0,0.12)'; ctx.fillRect(0, 0, W, H); }
     // beams
     f.beams = f.beams.filter(b => (b.life -= dt) > 0);
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     for (const b of f.beams) { const fromL = b.from === 'L'; const x0 = fromL ? lx + 20 : rx - 20, x1 = fromL ? rx : lx; const y0 = floorY - 60*sc, y1 = floorY - (fromL && boss ? H*0.25 : 60*sc);
-      const col = fromL ? R.auraColor(f.L.t, time) : (boss ? `hsl(${f.hue},100%,45%)` : R.auraColor(f.Rt.t, time)); const w_ = (b.crit ? 14 : 6)*sc*(b.life/0.35);
+      const col = fromL ? R.auraColor(f.L.t, time, null, f.L.fx.A) : (boss ? `hsl(${f.hue},100%,45%)` : R.auraColor(f.Rt.t, time, null, f.Rt.fx.A)); const w_ = (b.crit ? 14 : 6)*sc*(b.life/0.35);
       ctx.strokeStyle = col; ctx.lineWidth = w_; ctx.shadowColor = col; ctx.shadowBlur = 20; ctx.beginPath(); ctx.moveTo(x0, y0);
       for (let i = 1; i <= 8; i++) ctx.lineTo(x0 + (x1 - x0)*i/8, y0 + (y1 - y0)*i/8 + (i < 8 ? (Math.random() - 0.5)*20*sc : 0)); ctx.stroke();
       ctx.lineWidth = w_*0.35; ctx.strokeStyle = '#fff'; ctx.stroke(); }
@@ -586,7 +632,7 @@
   const lobbyChar = { moving: false, fx: {}, face: 1, seed: 0 };
   function drawLobby(){
     ctx.fillStyle = '#06050a'; ctx.fillRect(0, 0, W, H);
-    const t = Math.max(1, S.best >= 1 ? S.t : 1); lobbyChar.t = t;
+    const t = Math.max(1, S.best >= 1 ? S.t : 1); lobbyChar.t = t; lobbyChar.sk = S.sk; lobbyChar.as = S.as;
     R.character(ctx, W > 980 ? W*0.82 : W/2, H*0.9, Math.min(2.4, H/330), lobbyChar, time);
   }
 
@@ -597,6 +643,7 @@
     const dt = Math.min(0.05, (now - last)/1000); last = now; time += dt;
     AudioM.music(scene === 'lobby' ? 'lobby' : scene === 'fight' && fight ? (fight.kind === 'pvp' ? 'pvp' : 'fight') : 't' + Math.min(10, tierOf(S.t)));
     AudioM.aura(Math.min(10, tierOf(S.t)), me.moving, scene === 'world');
+    pvpTick(); unlockTick();
     if (scene === 'lobby') drawLobby();
     else if (scene === 'world') { updateWorld(dt); drawWorld(dt); refreshHUD(false); }
     else if (scene === 'fight') { fightStep(dt); if (fight) drawFight(dt); else drawWorld(dt); Net.sendMe(Object.assign(meNet(), { mv: 0 })); }

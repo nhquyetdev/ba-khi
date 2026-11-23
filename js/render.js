@@ -68,6 +68,9 @@ const R = (() => {
     const fy = y - (P.float||0)*sc - (P.bob||0)*sc;
     const hipY = fy - H*0.46, neckY = fy - H*0.86, headR = H*0.12;
     const col = opt.color || '#f2f2f2';
+    const hx0 = x + Math.sin(P.head||0)*H*0.06, hy0 = neckY - H*0.114 + Math.abs(P.head||0)*H*0.036;
+    const geo = { x, fy, hipY, neckY, shY: neckY + H*0.05, H, sc, headR, hx: hx0, hy: hy0, P };
+    if (opt.before) opt.before(geo);
     ctx.save();
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -94,12 +97,16 @@ const R = (() => {
     }
     if (opt.smile) { ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, lw*0.5); ctx.beginPath(); ctx.arc(hx, hy + headR*0.1, headR*0.55, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke(); }
     ctx.restore();
+    if (opt.after) opt.after(geo);
     return { headX: hx, headY: hy, cy: (fy + neckY)/2, top: hy - headR, fy };
   }
 
   // ---------------- Aura ----------------
-  function auraStyle(t){ return AURA[tierOf(t)]; }
-  function auraColor(t, time, light){ const A = auraStyle(t); const h = A.rainbow ? (time*90) % 360 : A.h; return hsl(h, A.s, light||A.l); }
+  const skinCache = {};
+  function auraStyle(t, as){ const base = AURA[tierOf(t)]; if (!as || as === 'realm' || typeof AURA_SKINS === 'undefined') return base;
+    const k = tierOf(t) + ':' + as; if (skinCache[k]) return skinCache[k]; const sk = AURA_SKINS.find(a => a.id === as); if (!sk || !sk.over) return base;
+    return (skinCache[k] = Object.assign({ size: base.size, alpha: Math.max(0.6, base.alpha), tongues: base.tongues, pulse: base.pulse }, sk.over)); }
+  function auraColor(t, time, light, A_){ const A = A_ || auraStyle(t); const h = A.rainbow ? (time*90) % 360 : A.h; return hsl(h, A.s, light||A.l); }
 
   function flameShape(ctx, cx, cy, w, h, time, tongues, seed, amp){
     ctx.beginPath();
@@ -121,7 +128,7 @@ const R = (() => {
 
   // ch: { parts:[], lastLight, ... } per-character fx state
   function auraBack(ctx, x, y, sc, t, time, moving, ch, P){
-    const A = auraStyle(t), tier = tierOf(t), sub = subOf(t);
+    const A = ch.A || auraStyle(t), tier = tierOf(t), sub = subOf(t);
     const k = (A.size + sub*0.012*(tier+1)) * sc * (moving ? 1.08 : 1);
     const fl = (P.float||0)*sc;
     const cx = x, cy = y - fl - 34*sc, w = 30*k, h = 46*k;
@@ -212,7 +219,7 @@ const R = (() => {
   }
 
   function auraFront(ctx, x, y, sc, t, time, moving, ch, P){
-    const A = auraStyle(t), tier = tierOf(t), sub = subOf(t);
+    const A = ch.A || auraStyle(t), tier = tierOf(t), sub = subOf(t);
     const k = (A.size + sub*0.012*(tier+1)) * sc * (moving ? 1.08 : 1);
     const fl = (P.float||0)*sc, cx = x, cy = y - fl - 34*sc, w = 30*k, h = 46*k;
     const hue = A.rainbow ? (time*90) % 360 : A.h;
@@ -260,30 +267,44 @@ const R = (() => {
       if (A.inward) { const a = rnd(0, TAU), r = w*2.5; ch.parts.push({ x: cx + Math.cos(a)*r, y: cy + Math.sin(a)*r*0.7, vx: 0, vy: 0, life: 1, in: 1 }); }
       else ch.parts.push({ x: cx + rnd(-w*0.8, w*0.8), y: y - rnd(0, h*0.3), vx: rnd(-10, 10), vy: -rnd(40, 90)*(1 + A.size*0.3), life: 1 });
     }
+    if ((A.petals || A.frost) && Math.random() < 0.5) ch.parts.push({ x: cx + rnd(-w*1.6, w*1.6), y: cy - h*1.4, vx: rnd(-20, 20), vy: rnd(25, 55), life: 1.4, kind: A.petals ? 'petal' : 'flake', rot: rnd(0, 6) });
+    if (A.wisps) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      for (let i = 0; i < 9; i++) { const ph = (time*0.9 + i/9) % 1, wx = cx + Math.sin(i*2.3 + time*0.7)*w*0.9, wy = cy + h*0.6 - ph*h*2;
+        ctx.strokeStyle = hsl(i%2 ? A.oh : A.h, A.s + 20, 88, (1 - ph)*0.7); ctx.lineWidth = 2*sc; ctx.beginPath(); ctx.moveTo(wx, wy); ctx.quadraticCurveTo(wx + Math.sin(time*3 + i)*6*sc, wy - 14*sc, wx, wy - 28*sc); ctx.stroke(); }
+      ctx.restore(); }
     ctx.save(); ctx.globalCompositeOperation = A.inward ? 'source-over' : 'lighter';
     for (let i = ch.parts.length - 1; i >= 0; i--) { const p = ch.parts[i];
+      if (p.kind) { p.x += p.vx/60 + Math.sin(time*2 + i)*0.4; p.y += p.vy/60; p.life -= 0.012; p.rot += 0.05; ctx.save(); ctx.globalCompositeOperation = 'source-over'; ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+        ctx.fillStyle = p.kind === 'petal' ? `rgba(255,180,210,${Math.min(1, p.life)})` : `rgba(220,245,255,${Math.min(1, p.life)})`;
+        if (p.kind === 'petal') { ctx.beginPath(); ctx.ellipse(0, 0, 4*sc, 2.2*sc, 0, 0, TAU); ctx.fill(); } else { ctx.fillRect(-2*sc, -0.6*sc, 4*sc, 1.2*sc); ctx.fillRect(-0.6*sc, -2*sc, 1.2*sc, 4*sc); }
+        ctx.restore(); if (p.life <= 0) ch.parts.splice(i, 1); continue; }
       if (p.in) { p.x += (cx - p.x)*0.06; p.y += (cy - p.y)*0.06; p.life -= 0.02; ctx.fillStyle = hsl(A.oh, 100, 65, p.life); }
       else { p.x += p.vx/60; p.y += p.vy/60; p.life -= 0.018; ctx.fillStyle = hsl(A.rainbow ? (hue + i*20)%360 : A.oh, A.os, Math.min(95, A.l + 15), p.life*intensity); }
       ctx.fillRect(p.x - 1.5*sc, p.y - 1.5*sc, 3*sc, 3*sc);
       if (p.life <= 0) ch.parts.splice(i, 1); }
-    if (ch.parts.length > 80) ch.parts.splice(0, ch.parts.length - 80);
+    if (ch.parts.length > 110) ch.parts.splice(0, ch.parts.length - 110);
     if (A.sparks && Math.random() < 0.3) { ctx.strokeStyle = 'rgba(255,255,210,0.9)'; ctx.lineWidth = 1.2*sc; const sx = cx + rnd(-w, w), sy = cy + rnd(-h, h*0.5); ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + rnd(-6, 6)*sc, sy + rnd(-6, 6)*sc); ctx.stroke(); }
     ctx.restore();
   }
 
   // draw full character (aura + stickman + nametag)
   function character(ctx, x, y, sc, c, time){
-    const t = c.t, tier = tierOf(t);
+    const t = c.t, tier = tierOf(t); c.fx = c.fx || {};
+    c.fx.A = auraStyle(t, c.as);
+    const SK = (typeof SKINS !== 'undefined' && c.sk) ? (SKINS.find(k => k.id === c.sk) || null) : null;
     const P = pose(tier, time + (c.seed||0), c.moving, c.phase||0, subOf(t));
     // shadow
     ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(x, y, 16*sc*(1 - Math.min(0.5, (P.float||0)/120)), 6*sc, 0, 0, TAU); ctx.fill();
     auraBack(ctx, x, y, sc, t, time + (c.seed||0), c.moving, c.fx, P);
-    const A = auraStyle(t);
-    const isVoid = A.void && t <= MAX_TITLE;
+    const A = c.fx.A;
+    const isVoid = A.void && t <= MAX_TITLE && !(SK && SK.body);
     ctx.save(); if (c.face < 0) { ctx.translate(x, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
     if (A.glitch && Math.random() < 0.3) { const o = rnd(2, 5)*sc; stickman(ctx, x - o, y, sc, P, { color: 'rgba(0,255,255,0.5)' }); stickman(ctx, x + o, y, sc, P, { color: 'rgba(255,0,140,0.5)' }); }
-    const eye = tier >= 2 ? (isVoid ? '#fff' : auraColor(t, time, 80)) : null;
-    const g = stickman(ctx, x, y, sc, P, { outlineColor: isVoid ? 'rgba(200,140,255,0.8)' : null, color: isVoid ? '#0a0010' : (tier >= 8 ? '#fffbe8' : '#f2f2f2'), headFill: isVoid ? '#000' : '#121212', eyes: eye, glow: tier >= 3 ? auraColor(t, time) : null, smile: c.smile });
+    const eye = tier >= 2 ? (isVoid ? '#fff' : auraColor(t, time, 80, A)) : null;
+    const acc = SK ? SK.acc : [], hair = tier >= 2 ? auraColor(t, time, 70, A) : '#1a1a1a';
+    const g = stickman(ctx, x, y, sc, P, { outlineColor: SK && SK.outline ? SK.outline : (isVoid ? 'rgba(200,140,255,0.8)' : null), color: SK && SK.body ? SK.body : (isVoid ? '#0a0010' : (tier >= 8 ? '#fffbe8' : '#f2f2f2')),
+      headFill: isVoid ? '#000' : '#121212', eyes: (acc.includes('shades') || acc.includes('fox')) ? null : eye, glow: tier >= 3 ? auraColor(t, time, null, A) : null, smile: c.smile,
+      before: acc.length && R.skinBack ? geo => R.skinBack(ctx, geo, acc, time, hair) : null, after: acc.length && R.skinFront ? geo => R.skinFront(ctx, geo, acc, time, hair, eye) : null });
     ctx.restore();
     auraFront(ctx, x, y, sc, t, time + (c.seed||0), c.moving, c.fx, P);
     if (A.shake && !c.moving) c.shake = 1.5; else c.shake = 0;

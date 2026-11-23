@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>GodK Bá Khí v1.2</title>
+<title>GodK Bá Khí v1.3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,600&display=swap&subset=vietnamese" rel="stylesheet">
 <style>
@@ -80,6 +80,16 @@
   .vol{display:flex;flex-direction:column;gap:8px;margin:10px auto;max-width:320px;text-align:left}
   .vol label{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:14px}
   .vol input{flex:1;max-width:170px;accent-color:#ffb52a}
+  #pvpCard{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(30,6,12,.95);border:2px solid #ff4d5e;border-radius:14px;padding:12px 18px;text-align:center;width:min(360px,92vw);box-shadow:0 0 30px rgba(255,40,60,.5);animation:pvpPop .35s ease-out}
+  #pvpCard .pTitle{font-weight:900;color:#ff6b78;letter-spacing:3px}
+  #pvpCard .big{font-weight:800;margin:4px 0}
+  @keyframes pvpPop{from{transform:translateX(-50%) scale(.6);opacity:0}}
+  .wtabs{margin:8px 0}
+  .wGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;max-height:38vh;overflow:auto;text-align:left}
+  .wItem{background:#16121f;border:1px solid #3a3050;border-radius:8px;padding:7px 8px;color:#eee;cursor:pointer;display:flex;flex-direction:column;gap:2px;font-family:inherit}
+  .wItem b{font-size:13px}.wItem small{font-size:11px;color:#aaa}
+  .wItem.on{border-color:#ffd35a;box-shadow:0 0 8px rgba(255,210,80,.4)}
+  .wItem.lockedW{opacity:.55;cursor:default}
   #fightUI{display:none;position:fixed;inset:0;z-index:4;pointer-events:none}
   #modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:9}
   #modalBody{background:#0f0c17;border:1px solid #4a4060;border-radius:14px;padding:18px;width:min(480px,94vw);max-height:88vh;overflow:auto;text-align:center}
@@ -99,14 +109,14 @@
   .cItem.cur{outline:1px solid #fff}
   #joy{position:fixed;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:2px solid rgba(255,255,255,.25);display:none;pointer-events:none;z-index:4}
   #joyKnob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.25)}
-  @media (max-width:640px){ #hTitle{font-size:17px} #me{min-width:0;max-width:52vw;padding:8px} #lb{width:44vw} #lbList{max-height:24vh} #minimap{width:96px;height:96px} #btns .btn{min-width:84px;font-size:12px;padding:7px} #capMsg{bottom:auto;top:132px;font-size:13px} #gateBtn{bottom:120px} }
+  @media (max-width:640px){ #hTitle{font-size:17px} #me{min-width:0;max-width:52vw;padding:8px} #lb{width:44vw} #lbList{max-height:24vh} #minimap{width:96px;height:96px} #btns .btn{min-width:84px;font-size:12px;padding:6px} #capMsg{bottom:auto;top:132px;font-size:13px} #gateBtn{bottom:120px} }
 </style>
 </head>
 <body>
 <canvas id="cv"></canvas>
 
 <div id="lobby">
-  <div class="logo">GodK Bá Khí<small>v1.2 · 霸氣</small></div>
+  <div class="logo">GodK Bá Khí<small>v1.3 · 霸氣</small></div>
   <div class="tag" data-t="tagline"></div>
   <div class="card">
     <input id="nameIn" maxlength="16" data-ph="yourName">
@@ -142,6 +152,7 @@
   <canvas id="minimap" width="140" height="140"></canvas>
   <div id="btns">
     <button class="btn" id="btnStats">📊 <span data-t="stats"></span></button>
+    <button class="btn" id="btnWardrobe">🎭 <span data-t="wardrobe"></span></button>
     <button class="btn" id="btnCodex">📜 <span data-t="codex"></span></button>
     <button class="btn gold" id="btnRebirth" style="display:none">✦ <span data-t="rebirth"></span></button>
     <button class="btn" id="btnSettings">⚙ <span data-t="settings"></span></button>
@@ -156,6 +167,7 @@
 <div id="banner"></div>
 <div id="toasts"></div>
 <div id="joy"><div id="joyKnob"></div></div>
+<div id="pvpCard" style="display:none"></div>
 <div id="modal"><div id="modalBody"></div></div>
 
 <script src="config.js"></script>
@@ -165,6 +177,7 @@
 <script src="js/render.js"></script>
 <script src="js/render2.js"></script>
 <script src="js/render3.js"></script>
+<script src="js/render4.js"></script>
 <script src="js/game.js"></script>
 </body>
 </html>

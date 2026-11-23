@@ -1,6 +1,6 @@
 // GodK Bá Khí v1.0 — data: titles, tiers, bosses, i18n, formulas
 'use strict';
-const GAME_VERSION = '1.2';
+const GAME_VERSION = '1.3';
 const FONT = "'Be Vietnam Pro', 'Segoe UI', Roboto, Arial, sans-serif";
 const SAVE_KEY = 'godk_ba_khi_save_v1';
 
@@ -88,11 +88,12 @@ const F = {
   xpRate: (s, moving, inWell, buff) => (1 + s.R) * (1 + 0.08 * s.L) * (moving ? 2 : 1) * (inWell ? 1.5 : 1) * (1 + 0.05 * (s.stelae ? s.stelae.length : 0)) * (1 + 0.01 * (s.marks || 0)) * (buff ? 5 : 1),
   statMult: (t, E, M) => (1 + 0.035 * E) * Math.pow(1.01, t) * (1 + 0.005 * (M || 0)),
   stats(L, t, E, M){ const m = F.statMult(t, E, M); return { hp: (120 + 30*L)*m, atk: (12 + 3.2*L)*m, def: (3 + 0.7*L)*m, crit: 0.10 + Math.min(0.15, E*0.0005) }; },
-  boss(g){ const L = LV_PER_TITLE*g; const b = F.stats(L, g, 0); const D = 0.7*Math.pow(1.017, g)*(g%20===0 ? 1.5 : 1);
+  boss(g){ const L = LV_PER_TITLE*g; const b = F.stats(L, g, 0); const D = 0.85*Math.pow(1.021, g)*(g%20===0 ? 1.5 : 1); // v1.3: tougher (~10.8h active)
     return { hp: b.hp*D*1.6, atk: b.atk*D*0.7, def: b.def*D, crit: 0.08 }; },
   essence: t => Math.floor(Math.pow(t, 1.5) / 3),
   dmg: (a, d) => a*a/(a+d),
   REBIRTH_MIN_TITLE: 20,
+  speed: t => Math.min(520, 260 + 1.2*t), // v1.3: a little faster every title
 };
 
 // ---------- Bosses (one archetype per tier; each gate is a variant) ----------
@@ -140,6 +141,15 @@ const EXTRA_BOSSES = [
   { id:'ongke',     en:'The Sack Man',         vi:'Ông Kẹ',              hue: 30,  intro:{en:['Children used to hear about him.','The sack is moving.'],vi:['Trẻ con từng được dọa về lão.','Cái bao đang cựa quậy.']}},
   { id:'nun',       en:'The Faceless Nun',     vi:'Nữ Tu Không Mặt',     hue: 220, intro:{en:['Candles light themselves.','She is praying. For you.'],vi:['Những ngọn nến tự bốc cháy.','Bà ta đang cầu nguyện. Cho bạn.']}},
   { id:'hound',     en:'The Night Hound',      vi:'Chó Săn Bóng Đêm',    hue: 0,   intro:{en:['Breathing behind you.','Too many eyes for one dog.'],vi:['Có tiếng thở sau lưng.','Quá nhiều mắt cho một con chó.']}},
+  // v1.3
+  { id:'bonedragon',en:'The Bone Dragon',      vi:'Rồng Xương',          hue: 30,  intro:{en:['Something old uncoils in the dark.','It remembers being a god.'],vi:['Có thứ gì đó rất cổ xưa trườn ra từ bóng tối.','Nó còn nhớ mình từng là thần.']}},
+  { id:'wisps',     en:'The Will-o\'-Wisps',   vi:'Ma Trơi',             hue: 160, intro:{en:['Little lights are floating closer.','Together, they make a face.'],vi:['Những đốm sáng nhỏ trôi lại gần.','Cùng nhau, chúng tạo thành một khuôn mặt.']}},
+  { id:'lakebeast', en:'The Lake Beast',       vi:'Thủy Quái',           hue: 180, intro:{en:['The floor is water now.','Something big is breathing under it.'],vi:['Nền đất đã hóa thành nước.','Có thứ gì đó rất lớn đang thở bên dưới.']}},
+  { id:'samurai',   en:'The Headless Samurai', vi:'Võ Sĩ Không Đầu',     hue: 0,   intro:{en:['A blade is drawn slowly.','It is still looking for its head.'],vi:['Một lưỡi kiếm được rút ra chậm rãi.','Nó vẫn đang đi tìm cái đầu của mình.']}},
+  { id:'reaper',    en:'The Reaper',           vi:'Thần Chết',           hue: 270, intro:{en:['Your name is on its list.','It is crossing it out.'],vi:['Tên bạn có trong danh sách của nó.','Nó đang gạch bỏ.']}},
+  { id:'tvhead',    en:'The Broadcast',        vi:'Người Đầu TV',        hue: 120, intro:{en:['Static fills the room.','You are on TV.'],vi:['Tiếng nhiễu sóng tràn ngập căn phòng.','Bạn đang lên sóng.']}},
+  { id:'golem',     en:'The Cursed Golem',     vi:'Người Đá Nguyền',     hue: 25,  intro:{en:['The runes are glowing.','The mountain stood up.'],vi:['Những ký tự cổ đang phát sáng.','Ngọn núi đã đứng dậy.']}},
+  { id:'oni',       en:'The Red Oni',          vi:'Quỷ Đỏ',              hue: 0,   intro:{en:['Drums in the distance.','It laughs like thunder.'],vi:['Tiếng trống vọng lại từ xa.','Nó cười như sấm.']}},
   { id:'mirror',    en:'The Broken Mirror',    vi:'Gương Vỡ',            hue: 200, intro:{en:['Your reflection is late.','It moved first.'],vi:['Hình phản chiếu của bạn bị chậm.','Nó đã cử động trước.']}},
 ];
 // v1.2 — exclusive bosses of the Realm of the Unlimited (title 201+)
@@ -159,19 +169,19 @@ const BOSS_FORMS = [
   { en:'Ascended III',   vi:'Siêu Cấp III',     h:44,  s:100, l:58, bolt:1, big:1 },
   { en:'Crimson God',    vi:'Huyết Thần',       h:352, s:100, l:56, bolt:1, big:1 },
   { en:'Azure God',      vi:'Lam Thần',         h:198, s:100, l:62, bolt:1, big:1 },
-  { en:'Ultra Instinct', vi:'Bản Năng Vô Cực',  h:220, s:20,  l:88, bolt:1, big:1 },
+  { en:'Silver Instinct', vi:'Bản Năng Vô Cực',  h:220, s:20,  l:88, bolt:1, big:1 },
   { en:'Void Form',      vi:'Hư Vô Hình',       h:285, s:90,  l:50, bolt:1, big:1, dark:1 },
 ];
 function bossFor(g){
   const n = EXTRA_BOSSES.length;
   if (g >= MAX_TITLE) { const pool = [BOSSES[10]].concat(UNLIMITED_BOSSES); return (g % 5 === 4) ? ALL_BOSSES[(g*7) % ALL_BOSSES.length] : pool[g % pool.length]; }
   const ti = tierOf(g); if (g % 20 === 0) return BOSSES[ti];
-  const pool = [BOSSES[ti]]; for (let k = 0; k < 5; k++) pool.push(EXTRA_BOSSES[(ti*5 + k) % n]);
+  const pool = [BOSSES[ti]]; for (let k = 0; k < 6; k++) pool.push(EXTRA_BOSSES[(ti*6 + k) % n]);
   if (ti > 0) pool.push(BOSSES[ti - 1]);
   return pool[(g*5) % pool.length]; // step 5 so neighbouring gates differ
 }
 function bossForm(g){ const ti = Math.min(9, tierOf(g)); return Math.min(8, Math.floor(ti*0.8 + (((g - 1) % 20)/7))); }
-function unlockedBosses(t){ const ti = Math.min(9, tierOf(t)); const out = BOSSES.slice(0, ti + 1).concat(EXTRA_BOSSES.slice(0, Math.min(EXTRA_BOSSES.length, ti*5 + 5)));
+function unlockedBosses(t){ const ti = Math.min(9, tierOf(t)); const out = BOSSES.slice(0, ti + 1).concat(EXTRA_BOSSES.slice(0, Math.min(EXTRA_BOSSES.length, ti*6 + 6)));
   return t > MAX_TITLE ? out.concat(UNLIMITED_BOSSES, [BOSSES[10]]) : out; }
 
 // v1.2: Wandering Horrors roam the open map (positions from the shared clock → everyone sees them in the same place)
@@ -253,6 +263,9 @@ const I18N = {
     marks:'Conquest Marks', markEffect:'each: +1% aura gain, +0.5% all stats',
     eventSpawn:'{n} has opened somewhere! Step inside for ×5 aura!', eventGot:'AURA ×5 for {m} minutes!', eventNext:'Next event in {t}', eventLeft:'{n} closes in {t}', buff:'×5 Aura', riftsReset:'Blood Moon: all Rift Gates reopened!',
     transform:'TRANSFORMATION!',
+    wardrobe:'Wardrobe', tabAura:'Auras', tabNick:'Nicknames', tabSkin:'Skins', equipped:'Equipped', equip:'Equip', locked:'Locked', unlockedNew:'Unlocked: {n}!', nickname:'Nickname', skin:'Skin', auraStyle:'Aura',
+    pvpCooldown:'Duel requests on cooldown: {t}', pvpSeen:'{n} received your challenge…', pvpTimeout:'No answer. You can challenge again in 1 minute.', pvpDeclinedCD:'Duel declined. You can challenge again in 1 minute.', pvpBusy:'They are busy fighting — the request will wait.',
+    gateSkip:'Conquered gate — passed automatically', speed:'Speed',
     roamName:'Wandering Horror', roamWin:'Horror banished! +{x} aura', roamWinMark:'Horror banished! +{x} aura · +1 Conquest Mark', challengeRoam:'Fight', roamCD:'It will return…',
     music:'Music', sfxVol:'Effects', auraVol:'Aura sound', audioFiles:'Custom audio files found: {n}', audioNone:'Using built-in chill music (put files in /audio to replace)',
   },
@@ -282,7 +295,86 @@ const I18N = {
     marks:'Ấn Chinh Phục', markEffect:'mỗi ấn: +1% bá khí, +0.5% mọi chỉ số',
     eventSpawn:'{n} đã mở ra đâu đó! Bước vào để nhận ×5 bá khí!', eventGot:'BÁ KHÍ ×5 trong {m} phút!', eventNext:'Sự kiện tiếp theo sau {t}', eventLeft:'{n} đóng sau {t}', buff:'×5 Bá Khí', riftsReset:'Huyết Nguyệt: mọi Cổng Hoang đã mở lại!',
     transform:'BIẾN HÌNH!',
+    wardrobe:'Tủ Đồ', tabAura:'Hào quang', tabNick:'Biệt hiệu', tabSkin:'Trang phục', equipped:'Đang dùng', equip:'Dùng', locked:'Chưa mở', unlockedNew:'Mở khóa: {n}!', nickname:'Biệt hiệu', skin:'Trang phục', auraStyle:'Hào quang',
+    pvpCooldown:'Thách đấu đang hồi: {t}', pvpSeen:'{n} đã nhận được lời thách đấu…', pvpTimeout:'Không có phản hồi. Có thể thách đấu lại sau 1 phút.', pvpDeclinedCD:'Đối thủ từ chối. Có thể thách đấu lại sau 1 phút.', pvpBusy:'Đối thủ đang đánh boss — lời mời sẽ chờ.',
+    gateSkip:'Cổng đã chinh phục — tự động vượt qua', speed:'Tốc độ',
     roamName:'Tà Ảnh Lang Thang', roamWin:'Đã xua tan Tà Ảnh! +{x} bá khí', roamWinMark:'Đã xua tan Tà Ảnh! +{x} bá khí · +1 Ấn Chinh Phục', challengeRoam:'Giao chiến', roamCD:'Nó sẽ quay lại…',
     music:'Nhạc nền', sfxVol:'Hiệu ứng', auraVol:'Âm hào quang', audioFiles:'Đã nhận file âm thanh riêng: {n}', audioNone:'Đang dùng nhạc chill có sẵn (bỏ file vào thư mục /audio để thay)',
   }
 };
+
+
+// ===================== v1.3 cosmetics =====================
+// requirement: [kind, value]; kinds: free, best (highest title), R (rebirths), pvpW, bossWins, riftWins, roamWins, events, wells, stelae, marks, dist
+const REQ_TEXT = {
+  free: { en:'Free', vi:'Miễn phí' }, best: { en:'Reach realm {c} (title #{v})', vi:'Đạt cảnh giới {c} (danh hiệu #{v})' }, R: { en:'Rebirth {v} times', vi:'Tái sinh {v} lần' },
+  pvpW: { en:'Win {v} PvP duels', vi:'Thắng {v} trận PvP' }, bossWins: { en:'Defeat {v} Dungeon Gate bosses', vi:'Hạ {v} boss Cổng Ngục' }, riftWins: { en:'Conquer {v} Rift Gates', vi:'Chinh phục {v} Cổng Hoang' },
+  roamWins: { en:'Banish {v} Wandering Horrors', vi:'Xua tan {v} Tà Ảnh' }, events: { en:'Enter {v} ×5 event gates', vi:'Vào {v} cổng sự kiện ×5' }, wells: { en:'Find {v} Aura Wells', vi:'Tìm {v} Giếng Bá Khí' },
+  stelae: { en:'Find {v} Ancient Stelae', vi:'Tìm {v} Bia Cổ' }, marks: { en:'Own {v} Conquest Marks', vi:'Sở hữu {v} Ấn Chinh Phục' }, dist: { en:'Travel {v} distance', vi:'Di chuyển quãng đường {v}' },
+};
+function reqProgress(S, req){ const st = S.stats || {}; const [k, v] = req;
+  const cur = k === 'free' ? 1 : k === 'best' ? S.best : k === 'R' ? S.R : k === 'pvpW' ? S.pvpW : k === 'wells' ? (S.wells||[]).length : k === 'stelae' ? (S.stelae||[]).length : k === 'marks' ? (S.marks||0) : (st[k] || 0);
+  return [cur, k === 'free' ? 1 : v]; }
+function reqMet(S, req){ const [c, v] = reqProgress(S, req); return c >= v; }
+function reqText(req, lang){ const [k, v] = req; return REQ_TEXT[k][lang].replace('{v}', k === 'dist' ? (v/1000) + 'K' : v).replace('{c}', k === 'best' ? (Math.floor((v-1)/20) + 1) : ''); }
+
+// Aura styles (override the realm aura colour/effects; the realm still decides the size)
+const AURA_SKINS = [
+  { id:'realm',    en:'Realm Aura',        vi:'Hào Quang Cảnh Giới',  req:['free',0] },
+  { id:'instinct', en:'Silver Instinct',   vi:'Bản Năng Vô Cực',      req:['pvpW',5],     over:{ h:215, s:30, l:90, oh:255, os:70, wisps:1, rings:1, embers:1 } },
+  { id:'golden',   en:'Golden Warrior',    vi:'Chiến Binh Hoàng Kim', req:['best',41],    over:{ h:50, s:100, l:60, oh:40, os:100, sparks:1, lightningFrom:1, embers:2 } },
+  { id:'azure',    en:'Azure Divinity',    vi:'Lam Thần',             req:['best',61],    over:{ h:195, s:100, l:62, oh:210, os:100, embers:2, halo:1 } },
+  { id:'rose',     en:'Rose Divinity',     vi:'Hồng Thần',            req:['R',2],        over:{ h:330, s:90, l:66, oh:300, os:90, embers:2, sparks:1 } },
+  { id:'berserk',  en:'Berserk',           vi:'Cuồng Bạo',            req:['bossWins',50],over:{ h:0, s:100, l:48, oh:350, os:100, darkCore:1, lightning:1, cracks:1 } },
+  { id:'frost',    en:'Frost Prison',      vi:'Băng Ngục',            req:['wells',5],    over:{ h:190, s:80, l:85, oh:200, os:90, frost:1 } },
+  { id:'thunder',  en:'Thunder God',       vi:'Lôi Thần',             req:['riftWins',15],over:{ h:56, s:100, l:70, oh:220, os:100, lightning:1, sparks:1 } },
+  { id:'shadow',   en:'Shadow Flame',      vi:'Hắc Viêm',             req:['roamWins',15],over:{ h:275, s:80, l:45, oh:285, os:100, darkCore:1, inward:1 } },
+  { id:'sakura',   en:'Sakura Storm',      vi:'Bão Anh Đào',          req:['events',5],   over:{ h:335, s:80, l:80, oh:345, os:90, petals:1 } },
+  { id:'jade',     en:'Jade Dragon',       vi:'Ngọc Long',            req:['stelae',12],  over:{ h:150, s:85, l:58, oh:165, os:100, embers:2, runes:1 } },
+  { id:'galaxy',   en:'Galaxy',            vi:'Thiên Hà',             req:['R',5],        over:{ h:250, s:90, l:62, oh:290, os:100, stars:1, nebula:1 } },
+  { id:'ego',      en:'Destroyer Ego',     vi:'Bản Ngã Hủy Diệt',     req:['pvpW',20],    over:{ h:285, s:90, l:55, oh:300, os:100, darkCore:1, lightning:1, embers:2 } },
+  { id:'solar',    en:'Solar Flare',       vi:'Thái Dương Hỏa',       req:['best',150],   over:{ h:30, s:100, l:62, oh:15, os:100, rays:1, embers:3 } },
+  { id:'prism',    en:'Prism Unlimited',   vi:'Vô Lượng Lăng Kính',   req:['best',200],   over:{ h:0, s:100, l:65, oh:0, os:100, rainbow:1, rays:1, halo:1, stars:1 } },
+];
+// Nicknames (secondary titles shown above your name)
+const NICKS = [
+  { id:'none',        en:'(none)',              vi:'(không)',               req:['free',0] },
+  { id:'instinct',    en:'Silver Instinct',     vi:'Bản Năng Vô Cực',       req:['pvpW',5] },
+  { id:'duelist',     en:'Undefeated Duelist',  vi:'Kẻ Bất Bại',            req:['pvpW',10] },
+  { id:'reborn',      en:'The Reborn',          vi:'Kẻ Tái Sinh',           req:['R',1] },
+  { id:'phoenix',     en:'Phoenix',             vi:'Bất Tử Điểu',           req:['R',3] },
+  { id:'cycle',       en:'Endless Cycle',       vi:'Luân Hồi Vô Tận',       req:['R',6] },
+  { id:'slayer',      en:'Boss Slayer',         vi:'Đồ Tể Boss',            req:['bossWins',100] },
+  { id:'breaker',     en:'Gate Breaker',        vi:'Kẻ Phá Cổng',           req:['riftWins',10] },
+  { id:'hunter',      en:'Horror Hunter',       vi:'Thợ Săn Tà Ảnh',        req:['roamWins',10] },
+  { id:'wanderer',    en:'Wanderer',            vi:'Kẻ Lữ Hành',            req:['dist',300000] },
+  { id:'scholar',     en:'Stele Reader',        vi:'Người Đọc Bia',         req:['stelae',12] },
+  { id:'wellkeeper',  en:'Well Keeper',         vi:'Thủy Linh',             req:['wells',5] },
+  { id:'chaser',      en:'Event Chaser',        vi:'Kẻ Săn Sự Kiện',        req:['events',10] },
+  { id:'marklord',    en:'Mark Lord',           vi:'Ấn Chủ',                req:['marks',60] },
+  { id:'emperor',     en:'Aura Emperor',        vi:'Hoàng Đế Bá Khí',       req:['best',50] },
+  { id:'god',         en:'Aura God',            vi:'Thần Bá Khí',           req:['best',69] },
+  { id:'cosmic',      en:'Lord of the Stars',   vi:'Chúa Tể Tinh Không',    req:['best',97] },
+  { id:'unlimited',   en:'Master of the Unlimited', vi:'Vô Lượng Chi Chủ',  req:['best',200] },
+];
+// Character skins (body colour + accessories)
+const SKINS = [
+  { id:'classic',  en:'Classic',          vi:'Cổ Điển',            req:['free',0],      acc:[] },
+  { id:'headband', en:'Fighter Headband', vi:'Đai Võ Sĩ',          req:['free',0],      acc:['headband'] },
+  { id:'scarf',    en:'Red Scarf',        vi:'Khăn Quàng Đỏ',      req:['free',0],      acc:['scarf'] },
+  { id:'nonla',    en:'Conical Hat',      vi:'Nón Lá',             req:['free',0],      acc:['nonla'] },
+  { id:'spiky',    en:'Spiky Hair',       vi:'Tóc Dựng',           req:['best',21],     acc:['spiky'] },
+  { id:'shades',   en:'Cool Shades',      vi:'Kính Râm',           req:['events',3],    acc:['shades'] },
+  { id:'sword',    en:'Wandering Blade',  vi:'Kiếm Khách',         req:['pvpW',3],      acc:['sword', 'headband'] },
+  { id:'ninja',    en:'Ninja',            vi:'Ninja',              req:['riftWins',5],  acc:['ninja'], body:'#2a2f3a' },
+  { id:'fox',      en:'Fox Mask',         vi:'Mặt Nạ Hồ Ly',       req:['roamWins',5],  acc:['fox'] },
+  { id:'horns',    en:'Demon Horns',      vi:'Sừng Quỷ',           req:['bossWins',30], acc:['horns'], body:'#ffb0a0' },
+  { id:'crown',    en:'King\'s Crown',    vi:'Vương Miện',         req:['best',48],     acc:['crown', 'cape'] },
+  { id:'halo',     en:'Seraph',           vi:'Thiên Sứ',           req:['best',61],     acc:['halo', 'wings'] },
+  { id:'shadow',   en:'Shadow Self',      vi:'Bóng Tối',           req:['R',4],         acc:[], body:'#0b0b10', outline:'#cfc6ff' },
+  { id:'gold',     en:'Golden Body',      vi:'Thân Hoàng Kim',     req:['best',100],    acc:['cape'], body:'#ffd34a' },
+  { id:'cosmic',   en:'Starborn',         vi:'Thân Tinh Tú',       req:['best',150],    acc:['starbody'], body:'#1d2560', outline:'#9fb4ff' },
+  { id:'emperor',  en:'Unlimited Emperor',vi:'Hoàng Đế Vô Lượng',  req:['best',200],    acc:['crown', 'cape', 'halo'], body:'#fff6d8' },
+];
+const byId = (arr, id) => arr.find(x => x.id === id) || arr[0];
+const PVP_COOLDOWN = 60*1000, PVP_REQ_TTL = 45*1000;
