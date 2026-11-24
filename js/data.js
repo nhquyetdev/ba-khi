@@ -1,6 +1,6 @@
 // GodK Bá Khí v1.0 — data: titles, tiers, bosses, i18n, formulas
 'use strict';
-const GAME_VERSION = '1.7';
+const GAME_VERSION = '1.8';
 const FONT = "'Be Vietnam Pro', 'Segoe UI', Roboto, Arial, sans-serif";
 const SAVE_KEY = 'godk_ba_khi_save_v1';
 
@@ -113,8 +113,8 @@ function roman(n){const m=[[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],
 function titleName(t, lang){
   const L = lang==='vi'?1:0;
   if (t <= MAX_TITLE) return TITLES[t-1][L];
-  const k = t - MAX_TITLE; const w = LAYER_WORDS[(k-1)%LAYER_WORDS.length]; const c = Math.floor((k-1)/LAYER_WORDS.length)+1;
-  return lang==='vi' ? `GODK ✦ Tầng ${w[1]} ${roman(c)}` : `GODK ✦ ${w[0]} Layer ${roman(c)}`;
+  const k = t - MAX_TITLE; // v1.8: GodK Tower — title 300+N = cleared floor N
+  return lang==='vi' ? `GODK ✦ Tháp Tầng ${k}` : `GODK ✦ Tower Floor ${k}`;
 }
 function tierOf(t){ if (t > MAX_TITLE) return UNL; let i = 12; while (i > 0 && t < REALM_START[i]) i--; return i; }
 function subOf(t){ if (t > MAX_TITLE) return 20; const ti = tierOf(t); return Math.max(1, Math.ceil(posOf(t) / realmSize(ti) * 20)); } // normalised 1..20 (visuals)
@@ -244,7 +244,7 @@ const BOSS_FORMS = [
 ];
 function bossFor(g){
   const n = EXTRA_BOSSES.length;
-  if (g >= MAX_TITLE) { const pool = [BOSSES[10]].concat(UNLIMITED_BOSSES, HIGH_BOSSES); return (g % 5 === 4) ? ALL_BOSSES[(g*7) % ALL_BOSSES.length] : pool[g % pool.length]; }
+  if (g >= MAX_TITLE) return towerBoss(towerFloor(g));
   const ti = tierOf(g);
   if (ti >= 10) { // v1.4 realms 201–250
     if (g === MAX_TITLE - 1) return FINAL_MIRROR;
@@ -258,7 +258,7 @@ function bossFor(g){
   if (ti > 0) pool.push(BOSSES[ti - 1]);
   return pool[(g*5) % pool.length]; // step 5 so neighbouring gates differ
 }
-function bossForm(g){ const ti = tierOf(g); if (g === MAX_TITLE - 1) return BOSS_FORMS.length - 1; if (ti >= 10) return Math.min(BOSS_FORMS.length - 2, 9 + Math.min(3, ti - 10)); return Math.min(8, Math.floor(ti*0.8 + ((subOf(g) - 1)/7))); }
+function bossForm(g){ if (g >= MAX_TITLE) return towerForm(towerFloor(g)); const ti = tierOf(g); if (g === MAX_TITLE - 1) return BOSS_FORMS.length - 1; if (ti >= 10) return Math.min(BOSS_FORMS.length - 2, 9 + Math.min(3, ti - 10)); return Math.min(8, Math.floor(ti*0.8 + ((subOf(g) - 1)/7))); }
 function unlockedBosses(t){ const ti = Math.min(9, tierOf(t)); const out = BOSSES.slice(0, ti + 1).concat(EXTRA_BOSSES.slice(0, Math.min(EXTRA_BOSSES.length, ti*6 + 6)));
   return t > 200 ? out.concat(UNLIMITED_BOSSES, [BOSSES[10]], t > 220 ? HIGH_BOSSES.slice(0, Math.min(3, tierOf(t) - 9)) : []) : out; }
 
@@ -344,6 +344,9 @@ const I18N = {
     wardrobe:'Wardrobe', tabAura:'Auras', tabNick:'Nicknames', tabSkin:'Skins', equipped:'Equipped', equip:'Equip', locked:'Locked', unlockedNew:'Unlocked: {n}!', nickname:'Nickname', skin:'Skin', auraStyle:'Aura',
     pvpCooldown:'Duel requests on cooldown: {t}', pvpSeen:'{n} received your challenge…', pvpTimeout:'No answer. You can challenge again in 1 minute.', pvpDeclinedCD:'Duel declined. You can challenge again in 1 minute.', pvpBusy:'They are busy fighting — the request will wait.',
     gateSkip:'Conquered gate — passed automatically', speed:'Speed',
+    towerFloor:'GodK Tower · Floor {n}', towerGuardian:'TOWER GUARDIAN', affixes:'This week', towerBest:'Tower: highest floor', towerNext:'Next floor {n}: {a}', weeklyReset:'Affixes change in {t}',
+    bestiary:'Bestiary', bDiscovered:'Discovered {a} / {b}', bKills:'Defeated: {n}', bSeen:'Encountered', bWhere:'Found at', bLocked:'Not yet encountered',
+    whereGate:'Dungeon Gate', whereTower:'GodK Tower', whereRift:'Rift Gate', whereRoam:'Wandering', whereMirror:'Mirror Gate', whereFinal:'Final Gate',
     reachHidden:'Reach title ???', defeatHidden:'Defeat ???',
     memory:'Memory: {r}', replayEnding:'Watch the ending again', skip:'Skip',
     mirrorGate:'Mirror Gate', enterMirror:'Face your Reflection', mirrorChance:'Win chance: {p}%', mirrorWin:'You defeated yourself! +1 Mirror Shard (+3% all stats)', mirrorWinMax:'You defeated yourself again! (Shards maxed)', mirrorLose:'Your Reflection won. The mirror will open again in 3 minutes.', shards:'Mirror Shards', mirrorCD:'The mirror is clouded ({t})',
@@ -379,6 +382,9 @@ const I18N = {
     wardrobe:'Tủ Đồ', tabAura:'Hào quang', tabNick:'Biệt hiệu', tabSkin:'Trang phục', equipped:'Đang dùng', equip:'Dùng', locked:'Chưa mở', unlockedNew:'Mở khóa: {n}!', nickname:'Biệt hiệu', skin:'Trang phục', auraStyle:'Hào quang',
     pvpCooldown:'Thách đấu đang hồi: {t}', pvpSeen:'{n} đã nhận được lời thách đấu…', pvpTimeout:'Không có phản hồi. Có thể thách đấu lại sau 1 phút.', pvpDeclinedCD:'Đối thủ từ chối. Có thể thách đấu lại sau 1 phút.', pvpBusy:'Đối thủ đang đánh boss — lời mời sẽ chờ.',
     gateSkip:'Cổng đã chinh phục — tự động vượt qua', speed:'Tốc độ',
+    towerFloor:'Tháp GodK · Tầng {n}', towerGuardian:'HỘ VỆ THÁP', affixes:'Tuần này', towerBest:'Tháp: tầng cao nhất', towerNext:'Tầng {n}: {a}', weeklyReset:'Đổi hiệu ứng sau {t}',
+    bestiary:'Bách Khoa Boss', bDiscovered:'Đã gặp {a} / {b}', bKills:'Đã hạ: {n}', bSeen:'Đã chạm trán', bWhere:'Xuất hiện ở', bLocked:'Chưa gặp',
+    whereGate:'Cổng Ngục', whereTower:'Tháp GodK', whereRift:'Cổng Hoang', whereRoam:'Tà Ảnh lang thang', whereMirror:'Cổng Gương', whereFinal:'Cổng Cuối',
     reachHidden:'Đạt danh hiệu ???', defeatHidden:'Đánh bại ???',
     memory:'Ký ức: {r}', replayEnding:'Xem lại màn kết', skip:'Bỏ qua',
     mirrorGate:'Cổng Gương', enterMirror:'Đối mặt Bóng Gương', mirrorChance:'Cơ hội thắng: {p}%', mirrorWin:'Ngươi đã thắng chính mình! +1 Mảnh Gương (+3% mọi chỉ số)', mirrorWinMax:'Ngươi lại thắng chính mình! (Mảnh Gương đã tối đa)', mirrorLose:'Bóng Gương đã thắng. Gương sẽ mở lại sau 3 phút.', shards:'Mảnh Gương', mirrorCD:'Gương đang mờ ({t})',
@@ -471,3 +477,49 @@ const SKINS = [
 ];
 const byId = (arr, id) => arr.find(x => x.id === id) || arr[0];
 const PVP_COOLDOWN = 60*1000, PVP_REQ_TTL = 45*1000;
+
+
+// ===================== v1.8 GodK Tower (endgame after title 300) =====================
+// The gate fight at title g (g ≥ 300) is Tower Floor g − 299. Every 10th floor: a Tower Guardian. Weekly affixes.
+const towerFloor = g => g - MAX_TITLE + 1;
+const TOWER_GUARDIANS = [
+  { id:'warden',     en:'The Tower Warden',        vi:'Kẻ Gác Tháp',            hue: 30,  intro:{en:['Every key to this tower hangs from its chains.','None of them open the way back.'],vi:['Mọi chìa khóa của tòa tháp treo trên xiềng xích của nó.','Không chiếc nào mở được đường quay về.']}},
+  { id:'skydragon',  en:'The Celestial Dragon Emperor', vi:'Thiên Long Đế',      hue: 45,  intro:{en:['Thunder rolls inside the tower.','A dragon older than the sky opens one eye.'],vi:['Sấm rền vang bên trong tòa tháp.','Một con rồng già hơn cả bầu trời mở một mắt.']}},
+  { id:'asura',      en:'The Thousand-Armed Asura',vi:'Thiên Thủ A Tu La',       hue: 0,   intro:{en:['Three faces. A thousand hands.','Every hand holds a weapon that once killed a god.'],vi:['Ba khuôn mặt. Nghìn cánh tay.','Mỗi bàn tay cầm một món vũ khí từng giết một vị thần.']}},
+  { id:'titan',      en:'The Star-Forged Titan',   vi:'Tinh Thần Cự Nhân',       hue: 220, intro:{en:['Its body is a constellation.','It was built to hold the sky up. Now it wants to drop it.'],vi:['Thân thể nó là một chòm sao.','Nó được tạo ra để chống trời. Giờ nó muốn thả trời xuống.']}},
+  { id:'leviathan',  en:'The Void Leviathan',      vi:'Hư Không Cự Kình',        hue: 260, intro:{en:['The floor is gone. So is the sky.','Something vast is swimming through nothing.'],vi:['Mặt sàn biến mất. Bầu trời cũng vậy.','Có thứ gì khổng lồ đang bơi trong hư không.']}},
+  { id:'othergodk',  en:'GodK of Another World',   vi:'GodK Dị Giới',            hue: 0,   intro:{en:['In another world, someone also reached 300.','They did not stop there.'],vi:['Ở một thế giới khác, có kẻ cũng đã đạt 300.','Kẻ đó đã không dừng lại.']}},
+];
+function towerBoss(fl){
+  if (fl % 10 === 0) return TOWER_GUARDIANS[(fl/10 - 1) % TOWER_GUARDIANS.length];
+  const pool = HIGH_BOSSES.concat(UNLIMITED_BOSSES, [BOSSES[9], BOSSES[10]], EXTRA_BOSSES.filter(b => ['demoncult','bloodsword','reaper','bonedragon','hydra','sphinx','oni','tiangou'].includes(b.id)));
+  let h = (fl*2654435761) >>> 0; return pool[h % pool.length];
+}
+const towerCycle = fl => Math.floor((fl - 1)/60); // guardians return stronger every 60 floors
+const towerForm = fl => [9, 10, 11, 12][Math.min(3, Math.floor((fl - 1)/15))];
+function towerBossName(B, fl, lang){ const n = lang === 'vi' ? B.vi : B.en; const c = towerCycle(fl); return c > 0 ? `${n} ${roman(c + 1)}` : n; }
+
+// Weekly affixes — same for every player (week index from the shared clock)
+const AFFIXES = [
+  { id:'regen',  en:'Regeneration', vi:'Hồi Sinh',     ico:'💚', d:{en:'Boss heals 3% max HP every turn', vi:'Boss hồi 3% máu tối đa mỗi lượt'} },
+  { id:'thorns', en:'Thorns',       vi:'Phản Đòn',     ico:'🌵', d:{en:'Reflects 20% of damage taken', vi:'Phản lại 20% sát thương nhận vào'} },
+  { id:'crit',   en:'Deadly',       vi:'Chí Mạng',     ico:'🎯', d:{en:'Boss crit 35%, crits ×3', vi:'Boss bạo kích 35%, bạo kích ×3'} },
+  { id:'shield', en:'Aegis',        vi:'Khiên Thần',   ico:'🛡', d:{en:'Takes 50% damage while above half HP', vi:'Chỉ nhận 50% sát thương khi còn trên nửa máu'} },
+  { id:'leech',  en:'Lifesteal',    vi:'Hút Máu',      ico:'🩸', d:{en:'Heals 30% of damage dealt', vi:'Hồi 30% sát thương gây ra'} },
+  { id:'enrage', en:'Enrage',       vi:'Cuồng Nộ',     ico:'🔥', d:{en:'+6% attack every turn', vi:'+6% tấn công mỗi lượt'} },
+  { id:'armor',  en:'Adamant',      vi:'Kim Cương',    ico:'💎', d:{en:'Defense ×2', vi:'Phòng thủ ×2'} },
+  { id:'twin',   en:'Double Strike',vi:'Song Kích',    ico:'⚔', d:{en:'Every 3rd turn the boss strikes twice', vi:'Mỗi 3 lượt boss đánh 2 lần'} },
+  { id:'void',   en:'Void Aura',    vi:'Hư Vô',        ico:'🌀', d:{en:'Your crit chance is 0', vi:'Bạn không thể bạo kích'} },
+  { id:'giant',  en:'Colossal',     vi:'Khổng Lồ',     ico:'🗿', d:{en:'Boss HP ×1.6', vi:'Máu boss ×1.6'} },
+];
+const WEEK_MS = 7*24*3600*1000, WEEK_EPOCH = Date.UTC(2026, 10, 23); // weeks start Monday
+const weekIndex = now => Math.floor((now - WEEK_EPOCH) / WEEK_MS);
+function towerAffixes(fl, now){
+  const n = fl < 10 ? 1 : fl < 30 ? 2 : 3, w = weekIndex(now); let h = ((w + 7) * 2246822519 ^ fl * 3266489917) >>> 0;
+  const out = [], ids = AFFIXES.map((_, i) => i);
+  for (let i = 0; i < n; i++) { h = (h * 1103515245 + 12345) >>> 0; out.push(AFFIXES[ids.splice(h % ids.length, 1)[0]]); }
+  return out;
+}
+
+// Bestiary: every boss in the game (new arrays added later appear automatically)
+const bestiaryList = () => BOSSES.concat(EXTRA_BOSSES, UNLIMITED_BOSSES, HIGH_BOSSES, [MIRROR_BOSS, FINAL_MIRROR], TOWER_GUARDIANS);
