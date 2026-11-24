@@ -1,7 +1,7 @@
 // GodK Bá Khí v1.0 — data: titles, tiers, bosses, i18n, formulas
 'use strict';
-const GAME_VERSION = '1.11.1';
-const HARD_FROM = 200, ASCEND_K = 0.035, R1_END = 25, R1_HP = 0.96; // v1.11: gates 1–200 = original difficulty; Boss Ascension + Transformation only from gate 201
+const GAME_VERSION = '1.11.2';
+const ASCEND_FROM = 30, ASCEND_K = 0.013, R1_END = 25, R1_HP = 0.96; // v1.11.2: gate 26+ = exactly v2.2 difficulty; only realm 1 (1–25) eased // v1.11: gates 1–200 = original difficulty; Boss Ascension + Transformation only from gate 201
 const FONT = "'Be Vietnam Pro', 'Segoe UI', Roboto, Arial, sans-serif";
 const SAVE_KEY = 'godk_ba_khi_save_v1';
 
@@ -135,10 +135,10 @@ const F = {
   r1hp: g => g > 10 && g <= R1_END ? Math.pow(R1_HP, g - 10) : 1,
   // v2.1: player stats are NEVER lowered — Essence is linear again (+3.5% per point). Difficulty comes from the bosses instead.
   essMult: E => 1 + 0.035 * (E || 0),
-  // Boss Ascension (v1.11): none up to gate 200 (original difficulty), then e^(0.035·(g−200)) — fitted by fight simulation
-  ascend: g => g > HARD_FROM ? Math.exp(ASCEND_K * (g - HARD_FROM)) : 1, // ×1 ≤200, ×5.8 @250, ×33 @300 (same as before at the Tower)
-  // Real transformation: below 50% HP the boss heals and hits harder once (gate 201+ only). Realm-end gates: stronger.
-  transformMech: (g, realmEnd) => g <= HARD_FROM ? null : realmEnd ? [0.25, 1.35] : [0.15, 1.2],
+  // Boss Ascension (v2.1 curve, kept in v1.11.2): e^(0.013·(g−30)) from gate 31 — fitted by fight simulation
+  ascend: g => g > ASCEND_FROM ? Math.exp(ASCEND_K * (g - ASCEND_FROM)) : 1, // ×1.8 @75, ×4.1 @139, ×9.1 @200, ×33 @300 (v2.1/v2.2 curve)
+  // Real transformation: below 50% HP the boss heals and hits harder once (gate 26+). Realm-end gates: stronger.
+  transformMech: (g, realmEnd) => g <= R1_END ? null : realmEnd ? [0.25, 1.35] : [0.15, 1.2],
   essence: t => Math.floor(Math.pow(t, 1.5) / 5), // v1.5: /5 → more rebirths
   dmg: (a, d) => a*a/(a+d),
   REBIRTH_MIN_TITLE: 25, // end of realm 1
@@ -582,7 +582,7 @@ const SYMBOLS = [ // dx, dy from sanctum center; aff = signature mechanic
 // v1.9b: FIXED strength (gate-boss equivalent title) — no longer scales with your current title, so rebirthing can't trivialise it.
 // v1.9.2: calibrated on POWER vs play time with the strongest strategy (rebirth every ~2 min), not on rebirth count:
 // Four Symbols ~12h, Yellow Dragon ~16h, cursed Symbols ~28h, cursed Dragon ~36h. Players who only rebirth when stuck: ~18h / ~29h / >45h.
-const SANCT_REF = { normal: [258, 276], cursed: [319, 329] }; // [four symbols, Yellow Dragon] — v2.1: fight-accurate sim incl. mechanics + Boss Ascension
+const SANCT_REF = { normal: [218, 252], cursed: [330, 346] }; // [four symbols, Yellow Dragon] — v2.1: fight-accurate sim incl. mechanics + Boss Ascension
 const SANCT_CD_WIN = 10*60*1000, SANCT_CD_LOSE = 90*1000, SANCT_XP_SEC = 150;
 const SANCT_BONUS = { normal: [0.05, 0.15], cursed: [0.10, 0.30] }; // v2.2 buff (was 2/5 · 4/10 %) // permanent all-stat bonus on first clear (each symbol / dragon)
 const symbolBoss = (sym, cursed) => cursed ? Object.assign({}, sym, { id: sym.id + '_c', base: sym.id, cursed: 1, aff: sym.aff.concat(['void']), en: sym.en.replace(/ of the .*/, '') + ' · Cursed', vi: sym.vi + ' · Nguyền Rủa', intro: { en: ['A curse has soaked into the ' + (sym.center ? 'emperor' : 'guardian') + '.', 'Its eyes are no longer its own.'], vi: ['Lời nguyền đã ngấm vào ' + (sym.center ? 'vị hoàng đế' : 'vị thủ vệ') + '.', 'Đôi mắt ấy không còn là của nó nữa.'] } }) : sym;
