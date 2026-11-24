@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>GodK Bá Khí v1.8</title>
+<title>GodK Bá Khí v1.9</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,600&display=swap&subset=vietnamese" rel="stylesheet">
 <style>
@@ -67,6 +67,7 @@
   #btns .btn{padding:8px 10px;font-size:13px;min-width:110px}
   #minimap{position:absolute;left:10px;bottom:10px;width:140px;height:140px;border-radius:10px;opacity:.9}
   #capMsg{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(60,0,0,.75);border:1px solid #f33;color:#fcc;padding:8px 14px;border-radius:10px;font-weight:700;display:none;text-align:center;max-width:80vw;animation:pulse 2s infinite}
+  #sanctBtn{position:absolute;bottom:96px;left:50%;transform:translateX(-50%);display:none}
   #gateBtn{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);display:none;font-size:18px;padding:14px 26px}
   #toasts{position:fixed;top:30%;left:50%;transform:translateX(-50%);z-index:8;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:min(520px,92vw)}
   .toast{background:rgba(10,8,18,.9);border:1px solid #5a4a80;border-radius:10px;padding:10px 14px;text-align:center;transition:opacity .5s, transform .5s;font-size:14px}
@@ -126,7 +127,7 @@
 <canvas id="cv"></canvas>
 
 <div id="lobby">
-  <div class="logo">GodK Bá Khí<small>v1.8 · 霸氣</small></div>
+  <div class="logo">GodK Bá Khí<small>v2.0 · 霸氣</small></div>
   <div class="tag" data-t="tagline"></div>
   <div class="card">
     <input id="nameIn" maxlength="16" data-ph="yourName">
@@ -171,6 +172,7 @@
     <button class="btn" id="leaveBtn" style="display:none"></button>
   </div>
   <div id="capMsg"></div>
+  <button class="btn" id="sanctBtn" style="display:none"></button>
   <button class="btn red" id="gateBtn">獄 <span data-t="gateHint"></span></button>
 </div>
 
@@ -193,6 +195,7 @@
 <script src="js/render5.js"></script>
 <script src="js/render6.js"></script>
 <script src="js/render7.js"></script>
+<script src="js/render8.js"></script>
 <script src="js/game.js"></script>
 </body>
 </html>

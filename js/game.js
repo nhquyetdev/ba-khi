@@ -10,7 +10,7 @@
 
   // ---------------- Save ----------------
   const uid = () => 'p' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
-  const DEF = () => ({ v: 1, id: uid(), name: '', lang: (navigator.language||'').startsWith('vi') ? 'vi' : 'en', L: 1, xp: 0, t: 1, R: 0, E: 0, best: 1, stelae: [], wells: [], pvpW: 0, muted: false, vol: { m: 0.5, s: 0.8, a: 0.5 }, roamCD: {}, stats: {}, as: 'realm', sk: 'classic', nk: 'none', unlocks: [], pvpCD: 0, playSec: 0, marks: 0, riftCD: {}, riftSeen: [], buffUntil: 0, buffEv: -1, tv: 2, shards: 0, mirrorCD: 0, bestiary: {} });
+  const DEF = () => ({ v: 1, id: uid(), name: '', lang: (navigator.language||'').startsWith('vi') ? 'vi' : 'en', L: 1, xp: 0, t: 1, R: 0, E: 0, best: 1, stelae: [], wells: [], pvpW: 0, muted: false, vol: { m: 0.5, s: 0.8, a: 0.5 }, roamCD: {}, stats: {}, as: 'realm', sk: 'classic', nk: 'none', unlocks: [], pvpCD: 0, playSec: 0, marks: 0, riftCD: {}, riftSeen: [], buffUntil: 0, buffEv: -1, tv: 2, shards: 0, mirrorCD: 0, bestiary: {}, sanct: {}, sanctCD: {}, sanctMode: 'normal' });
   let S;
   function migrate(o){ // v1.5 inserted 50 titles: convert old title numbers (saves without tv:2)
     if (o && !o.tv) { if (typeof o.t === 'number') o.t = OT(o.t); if (typeof o.best === 'number') o.best = OT(o.best); o.tv = 2; } return o; }
@@ -78,7 +78,7 @@
   function toast(msg, ms=2600){ const d = document.createElement('div'); d.className = 'toast'; d.innerHTML = msg; $('toasts').appendChild(d); setTimeout(()=>d.classList.add('out'), ms); setTimeout(()=>d.remove(), ms + 600); }
   function titleCss(t){ const A = R.auraStyle(t); return A.rainbow ? 'rainbow' : ''; }
   function titleColor(t){ const A = R.auraStyle(t); if (A.void) return `hsl(${A.oh},100%,72%)`; return `hsl(${A.h},${Math.max(40, A.s)}%,${Math.min(80, Math.max(60, A.l))}%)`; }
-  const myStats = () => F.stats(S.L, S.t, S.E, S.marks, S.shards);
+  const myStats = () => F.stats(S.L, S.t, S.E, S.marks, S.shards, sanctBonus(S));
   const buffOn = () => Date.now() < (S.buffUntil || 0);
   const capped = () => S.L >= F.levelCap(S.t);
   const inWell = () => WELLS.some(([x, y]) => Math.hypot(me.x - x, me.y - y) < 70);
@@ -151,8 +151,8 @@
     else $('capMsg').textContent = T('capReached');
     const tg = scene === 'world' ? nearTarget() : null;
     $('gateBtn').style.display = tg ? 'block' : 'none';
-    if (tg) { const lbl = tg.kind === 'boss' ? '獄 ' + T('gateHint') : tg.kind === 'mirror' ? `🪞 ${T('enterMirror')} · ${T('mirrorChance').replace('{p}', Math.round(mirrorChance(S)*100))}` : tg.kind === 'roam' ? `☠ ${T('challengeRoam')} · ${S.lang === 'vi' ? tg.r.B.vi : tg.r.B.en}` : `⛩ ${T('enterRift')} · ${RIFT_RANKS[RIFTS[tg.i][2]][S.lang]}`; if ($('gateBtn').textContent !== lbl) $('gateBtn').textContent = lbl;
-      $('gateBtn').style.borderColor = tg.kind === 'boss' || tg.kind === 'mirror' ? '#ff5060' : tg.kind === 'roam' ? '#b060ff' : RIFT_RANKS[RIFTS[tg.i][2]].c; }
+    if (tg) { const lbl = tg.kind === 'boss' ? '獄 ' + T('gateHint') : tg.kind === 'sanct' ? `⛩ ${T('sanctEnter')} · ${(sanctCursed() ? symbolBoss(tg.sym, 1) : tg.sym)[S.lang]}` : tg.kind === 'mirror' ? `🪞 ${T('enterMirror')} · ${T('mirrorChance').replace('{p}', Math.round(mirrorChance(S)*100))}` : tg.kind === 'roam' ? `☠ ${T('challengeRoam')} · ${S.lang === 'vi' ? tg.r.B.vi : tg.r.B.en}` : `⛩ ${T('enterRift')} · ${RIFT_RANKS[RIFTS[tg.i][2]][S.lang]}`; if ($('gateBtn').textContent !== lbl) $('gateBtn').textContent = lbl;
+      $('gateBtn').style.borderColor = tg.kind === 'boss' || tg.kind === 'mirror' ? '#ff5060' : tg.kind === 'roam' ? '#b060ff' : tg.kind === 'sanct' ? (sanctCursed() ? '#ff2a60' : '#ffd040') : RIFT_RANKS[RIFTS[tg.i][2]].c; }
   }
 
   let lbTab = 'room';
@@ -208,10 +208,10 @@
       <tr><td>${T('level')}</td><td>${S.L} / ${F.levelCap(S.t)}</td></tr>
       <tr><td>❤ ${T('hp')}</td><td>${fmt(st.hp)}</td></tr><tr><td>🔥 ${T('atk')}</td><td>${fmt(st.atk)}</td></tr>
       <tr><td>🛡 ${T('def')}</td><td>${fmt(st.def)}</td></tr><tr><td>✴ ${T('crit')}</td><td>${(st.crit*100).toFixed(1)}%</td></tr><tr><td>👟 ${T('speed')}</td><td>${Math.round(F.speed(S.t))}</td></tr>
-      ${S.R ? `<tr><td>✦ ${T('rebirths')}</td><td>${S.R}</td></tr><tr><td>💠 ${T('essence')}</td><td>${S.E}</td></tr>` : ''}
+      ${S.R ? `<tr><td>✦ ${T('rebirths')}</td><td>${S.R}</td></tr><tr><td>💠 ${T('essence')}</td><td>${S.E}</td></tr><tr><td>💠 ${T('essBonus')}</td><td>×${F.essMult(S.E).toFixed(2)}</td></tr>` : ''}
       <tr><td>📈 ${T('xpBonus')}</td><td>×${((1 + S.R)*(1 + 0.05*S.stelae.length)*(1 + 0.01*(S.marks||0))).toFixed(2)}</td></tr>
       ${S.stelae.length ? `<tr><td>🗿 ${T('stelae')}</td><td>${S.stelae.length} / ${STELAE.length}</td></tr>` : ''}
-      ${S.marks ? `<tr><td>⛩ ${T('marks')}</td><td>${S.marks} / ${MAX_MARKS}</td></tr>` : ''}${S.shards ? `<tr><td>🪞 ${T('shards')}</td><td>${S.shards} / ${MAX_SHARDS}</td></tr>` : ''}${S.best > MAX_TITLE ? `<tr><td>🗼 ${T('towerBest')}</td><td>${S.best - MAX_TITLE}</td></tr>` : ''}<tr><td>⚔ ${T('pvpWins')}</td><td>${S.pvpW}</td></tr></table>${S.marks ? `<p class="muted small">⛩ ${T('markEffect')}</p>` : ''}
+      ${S.marks ? `<tr><td>⛩ ${T('marks')}</td><td>${S.marks} / ${MAX_MARKS}</td></tr>` : ''}${S.shards ? `<tr><td>🪞 ${T('shards')}</td><td>${S.shards} / ${MAX_SHARDS}</td></tr>` : ''}${sanctBonus(S) ? `<tr><td>⛩ ${T('sanctBonus')}</td><td>+${Math.round(sanctBonus(S)*100)}%</td></tr>` : ''}${S.best > MAX_TITLE ? `<tr><td>🗼 ${T('towerBest')}</td><td>${S.best - MAX_TITLE}</td></tr>` : ''}<tr><td>⚔ ${T('pvpWins')}</td><td>${S.pvpW}</td></tr></table>${S.marks ? `<p class="muted small">⛩ ${T('markEffect')}</p>` : ''}
       ${S.stelae.length ? `<div class="lore">${S.stelae.map(i => `<p>🗿 ${esc(STELAE_LORE[i][S.lang])}</p>`).join('')}</div>` : ''}
       <div class="row"><button class="btn" data-close>${T('close')}</button></div>`);
   }
@@ -237,7 +237,7 @@
     const gain = F.essence(S.t);
     modal(`<h2>✦ ${T('rebirthTitle')}</h2><p>${T('rebirthDesc')}</p>
       <p class="big">💠 +${gain} ${T('essence')}</p>
-      <p class="muted">${T('rebirthEffect').replace('{x}', gain).replace('{m}', (2 + S.R))}</p>
+      <p class="muted">${T('rebirthEffect').replace('{x}', gain).replace('{a}', F.essMult(S.E).toFixed(2)).replace('{b}', F.essMult(S.E + gain).toFixed(2)).replace('{m}', (2 + S.R))}</p>
       <div class="row"><button class="btn gold" id="doRebirth">✦ ${T('rebirthDo')}</button><button class="btn" data-close>${T('close')}</button></div>`);
     $('doRebirth').onclick = () => { S.E += gain; S.R += 1; S.L = 1; S.xp = 0; S.t = 1; save(); pushLB(); closeModal(); flash('#fff', 1.2); sfx.rebirth(); refreshHUD(true);
       bigBanner('✦ ' + T('rebirthTitle').toUpperCase() + ' ✦', `${T('rebirths')}: ${S.R} · 💠 ${S.E}`); };
@@ -282,7 +282,7 @@
   }
   $('btnWardrobe').onclick = openWardrobe;
   // ---------------- v1.8 Bestiary ----------------
-  const WHERE = { gate: 'whereGate', tower: 'whereTower', rift: 'whereRift', roam: 'whereRoam', mirror: 'whereMirror', final: 'whereFinal' };
+  const WHERE = { sanct: 'whereSanct', gate: 'whereGate', tower: 'whereTower', rift: 'whereRift', roam: 'whereRoam', mirror: 'whereMirror', final: 'whereFinal' };
   function drawBossThumb(c, B, t){ const x = c.getContext('2d'), W_ = c.width, H_ = c.height; x.fillStyle = '#0a0710'; x.fillRect(0, 0, W_, H_);
     if (B.id === 'mirrorself' || B.id === 'finalmirror') { R.character(x, W_/2, H_ - 14, H_/130, { t: B.id === 'finalmirror' ? MAX_TITLE : S.t, sk: S.sk, face: -1, fx: {}, mirror: true, seed: 3 }, t); return; }
     const sz = H_*0.72; x.save(); R.bossAura(x, W_/2, H_ - 10, sz, t, 4, 0); x.restore(); R.boss(x, B.id, W_/2, H_ - 10, sz, t, { hue: B.hue, hurt: 0, atk: 0, g: 100, target: [-200, -40], fx: {} }); }
@@ -300,7 +300,7 @@
     const e = S.bestiary[B.id];
     modal(`<h2 style="color:hsl(${B.hue},90%,70%)">${esc(B[S.lang])}</h2><canvas id="bCv" width="300" height="300" style="display:block;margin:6px auto;border-radius:12px"></canvas>
       <div class="lore">${B.intro[S.lang].map(l => `<p>“${esc(l)}”</p>`).join('')}</div>
-      <table class="st"><tr><td>${T('bKills').replace(': {n}', '')}</td><td>${e.k}</td></tr><tr><td>${T('bWhere')}</td><td>${T(WHERE[e.w] || 'whereGate')}</td></tr></table>
+      <table class="st">${B.trait && TRAITS[B.trait] ? `<tr><td>${T('trait')}</td><td>${TRAITS[B.trait].ico} ${TRAITS[B.trait][S.lang]}</td></tr>` : ''}<tr><td>${T('bKills').replace(': {n}', '')}</td><td>${e.k}</td></tr><tr><td>${T('bWhere')}</td><td>${T(WHERE[e.w] || 'whereGate')}</td></tr></table>
       <div class="row"><button class="btn" id="bBack">‹ ${T('bestiary')}</button><button class="btn" data-close>${T('close')}</button></div>`);
     $('bBack').onclick = openBestiary; const c = $('bCv'); cancelAnimationFrame(bRAF);
     const loop = () => { if (!document.body.contains(c)) return; drawBossThumb(c, B, time); bRAF = requestAnimationFrame(loop); }; loop();
@@ -363,6 +363,7 @@
   function nearTarget(){
     if (capped() && Math.hypot(me.x - GATE.x, me.y - GATE.y) < 170) return { kind: 'boss' };
     if (Date.now() >= (S.mirrorCD || 0) && Math.hypot(me.x - MIRROR_GATE.x, me.y - MIRROR_GATE.y) < 130) return { kind: 'mirror' };
+    if (S.sanctOpen && S.best >= SANCTUM.unlockTitle) for (const sym of SYMBOLS) { if (Math.hypot(me.x - SANCTUM.x - sym.dx, me.y - SANCTUM.y - sym.dy) < (sym.center ? 150 : 120)) { const st = sanctState(sym); if (st === 'ready') return { kind: 'sanct', sym }; } }
     for (let i = 0; i < RIFTS.length; i++) if (riftReady(i) && Math.hypot(me.x - RIFTS[i][0], me.y - RIFTS[i][1]) < 140) return { kind: 'rift', i };
     const pool = unlockedBosses(S.t), now = Date.now();
     for (let i = 0; i < ROAMERS.length; i++) { const r = roamerAt(i, now, pool); if (now >= ((S.roamCD || {})[i] || 0) && Math.hypot(me.x - r.x, me.y - r.y) < 150) return { kind: 'roam', i, r }; }
@@ -371,9 +372,10 @@
   function interact(){
     if (scene !== 'world') return;
     const tg = nearTarget(); if (!tg) return;
-    if (tg.kind === 'boss') startBoss(); else if (tg.kind === 'mirror') startMirror(); else if (tg.kind === 'roam') startRoam(tg.r); else startRift(tg.i);
+    if (tg.kind === 'boss') startBoss(); else if (tg.kind === 'sanct') startSanct(tg.sym); else if (tg.kind === 'mirror') startMirror(); else if (tg.kind === 'roam') startRoam(tg.r); else startRift(tg.i);
   }
   $('gateBtn').onclick = interact;
+  $('sanctBtn').onclick = () => { S.sanctMode = S.sanctMode === 'cursed' ? 'normal' : 'cursed'; save(); sfx.transform(); flash(S.sanctMode === 'cursed' ? '#600020' : '#fff6c0', 0.5); };
 
   // ---------------- Fights (boss & PvP) ----------------
   let fight = null;
@@ -383,7 +385,6 @@
     if (g >= MAX_TITLE) { // v1.8 GodK Tower
       const fl = towerFloor(g), B = towerBoss(fl), aff = towerAffixes(fl, Date.now()), ids = aff.map(a => a.id), st = Object.assign({}, F.boss(g)), guardian = fl % 10 === 0;
       if (guardian) { st.hp *= 1.3; st.atk *= 1.15; }
-      if (ids.includes('armor')) st.def *= 2; if (ids.includes('giant')) st.hp *= 1.6; if (ids.includes('crit')) st.crit = 0.35;
       beginBossFight({ kind: 'boss', g, B, st, form: towerForm(fl), jump: 1, tower: { fl, aff: ids, guardian, name: towerBossName(B, fl, S.lang) } }); return; }
     beginBossFight({ kind: 'boss', g, B: bossFor(g), st: F.boss(g), form: bossForm(g), jump: isRealmEnd(g) ? 2 : 1 }); }
   function startRift(i){
@@ -395,22 +396,41 @@
     const g = S.t, b = F.boss(g); const st = { hp: b.hp*ROAM_MULT, atk: b.atk*ROAM_MULT, def: b.def*ROAM_MULT, crit: b.crit };
     beginBossFight({ kind: 'roam', i: r.i, g, B: r.B, st, form: Math.min(8, 1 + Math.floor(tierOf(g)*0.8)), jump: 1 });
   }
+  // ---------------- v1.9 Four Symbols Sanctum ----------------
+  const sanctCursed = () => S.sanctMode === 'cursed' && sanctCursedOpen(S);
+  function sanctState(sym){ const cur = sanctCursed(), key = sym.id + (cur ? '_c' : ''), sn = S.sanct || {};
+    if (S.best < SANCTUM.unlockTitle) return 'locked';
+    if (sym.center && !SYMBOLS.filter(x => !x.center).every(x => sn[x.id + (cur ? '_c' : '')])) return 'locked';
+    if (Date.now() < ((S.sanctCD || {})[key] || 0)) return 'cd'; return sn[key] ? 'done' : 'ready'; }
+  function sanctThreat(sym){ // rough win estimate shown on the pedestal (☠☠☠ … ✓)
+    const cur = sanctCursed(), B = symbolBoss(sym, cur), b = applyTrait(F.boss(SANCT_REF[cur ? 'cursed' : 'normal'][sym.center ? 1 : 0]), B), p = myStats();
+    const m = (p.hp / F.dmg(b.atk, p.def)) / (b.hp / (F.dmg(p.atk, b.def)*1.15)); return m < 0.4 ? 0 : m < 0.75 ? 1 : m < 1.1 ? 2 : 3; }
+  function startSanct(sym){
+    const cur = sanctCursed(), B = symbolBoss(sym, cur), st = F.boss(SANCT_REF[cur ? 'cursed' : 'normal'][sym.center ? 1 : 0]);
+    beginBossFight({ kind: 'sanct', i: sym.id, g: S.t, B, st, form: cur ? 11 : (sym.center ? 10 : 9), jump: 1 });
+  }
   function startMirror(){
     const p = myStats(); const st = { hp: p.hp*MIRROR_MULT, atk: p.atk*MIRROR_MULT, def: p.def*MIRROR_MULT, crit: p.crit };
     beginBossFight({ kind: 'mirror', g: S.t, B: MIRROR_BOSS, st, form: 0, jump: 0, script: Math.random() < mirrorChance(S) });
   }
   function beginBossFight(o){
-    const { g, B, st } = o;
+    const { g, B } = o; let st = o.st;
+    // v1.9: boss trait + mechanics (tower weekly affixes, boss's own affixes)
+    const aff = [...new Set([].concat(o.tower ? o.tower.aff : [], o.aff || [], B.aff || []))];
+    if (o.kind !== 'mirror') st = applyTrait(st, B); st = Object.assign({}, st);
+    if (aff.includes('armor')) st.def *= 2; if (aff.includes('giant')) st.hp *= 1.6; if (aff.includes('crit')) st.crit = 0.35;
+    if (o.tower) o.tower.aff = aff;
     const hue = (B.hue + posOf(g)*6) % 360;
     fight = { kind: o.kind, riftI: o.i, g, B, rng: Math.random, hue, form: o.form, jump: o.jump, aBoost: 0, transformed: o.kind === 'mirror' || B.id === 'finalmirror', script: o.script, memPhase: -1,
       L: { name: S.name, t: S.t, st: myStats(), hp: 0, fx: {}, hurt: 0, atk: 0, sk: S.sk, as: S.as },
       Rt: { name: o.kind === 'mirror' || B.id === 'finalmirror' ? (S.lang === 'vi' ? B.vi : B.en) : bossName(B, o.form), st, hp: 0, hurt: 0, atk: 0, fx: {} },
-      phase: 'intro', timer: 0, round: 0, beams: [], nums: [], intro: B.intro[S.lang], result: null, tower: o.tower || null, enr: 1 };
+      phase: 'intro', timer: 0, round: 0, beams: [], nums: [], intro: B.intro[S.lang], result: null, tower: o.tower || null, aff: aff.length ? aff : null, enr: 1 };
     fight.L.hp = fight.L.st.hp; fight.Rt.hp = st.hp;
     if (o.tower) { const tw = o.tower; fight.Rt.name = `${tw.name} · ${BOSS_FORMS[o.form][S.lang]}`; fight.transformed = true; fight.towerBoost = Math.min(1.4, 0.2 + tw.fl/45);
-      if (tw.aff.includes('void')) fight.L.st = Object.assign({}, fight.L.st, { crit: 0 });
       fight.intro = [T('towerFloor').replace('{n}', tw.fl)].concat(fight.intro);
       if (tw.guardian) setTimeout(() => { if (fight && fight.tower === tw) { bigBanner(T('towerGuardian'), tw.name, `hsl(${B.hue},100%,65%)`); flash('#fff', 0.5); sfx.transform(); } }, 300); }
+    if (aff.includes('void')) fight.L.st = Object.assign({}, fight.L.st, { crit: 0 });
+    if (o.kind === 'sanct') fight.Rt.name = S.lang === 'vi' ? B.vi : B.en;
     S.bestiary = S.bestiary || {}; const be = S.bestiary[B.id] || (S.bestiary[B.id] = { k: 0 }); be.w = o.tower ? 'tower' : o.kind === 'boss' ? (B.id === 'finalmirror' ? 'final' : 'gate') : o.kind;
     scene = 'fight'; $('hud').classList.add('dim'); $('fightUI').style.display = 'block'; sfx.beat();
     Net.sendMe(Object.assign(meNet(), { mv: 0 }), true);
@@ -432,7 +452,7 @@
       while (f.timer >= tick && f.phase === 'fight') {
         f.timer -= tick; f.round++;
         // left attacks
-        const AF = f.tower ? f.tower.aff : null;
+        const AF = f.aff;
         let [d, c] = hitCalc(f.L.st, f.Rt.st, f.rng); if (AF && AF.includes('shield') && f.Rt.hp > f.Rt.st.hp*0.5) d *= 0.5;
         if (AF && AF.includes('thorns')) { f.L.hp -= d*0.2; if (f.L.hp <= 0) { f.L.hp = 0; end(false); break; } }
         if (f.script !== undefined) { d *= f.script ? 1.3 : 0.8; if (!f.script && f.Rt.hp - d <= 0) d = Math.max(0, f.Rt.hp - 1); } f.Rt.hp -= d; f.Rt.hurt = 0.25; f.L.atk = 1;
@@ -466,6 +486,12 @@
     if (f.kind === 'boss') { me.x = GATE.x; me.y = GATE.y + 200; if (f.result) { S.stats.bossWins = (S.stats.bossWins || 0) + 1;
       if (f.B.id === 'finalmirror') { S.stats.finalWins = (S.stats.finalWins || 0) + 1; const first = !S.ended; S.ended = true; save(); if (first) { playEnding(() => titleUp(true)); return; } }
       titleUp(true); } }
+    else if (f.kind === 'sanct') { const sym = SYMBOLS.find(x => x.id === f.riftI), key = f.B.id; me.x = SANCTUM.x + sym.dx*0.6; me.y = SANCTUM.y + sym.dy*0.6 + 90;
+      S.sanctCD = S.sanctCD || {}; S.sanct = S.sanct || {}; S.sanctCD[key] = Date.now() + (f.result ? SANCT_CD_WIN : SANCT_CD_LOSE);
+      if (f.result) { if (!S.sanct[key]) { S.sanct[key] = 1; const pct = Math.round(SANCT_BONUS[f.B.cursed ? 'cursed' : 'normal'][sym.center ? 1 : 0]*100); sfx.title(); toast('⛩ ' + T('sanctFirst').replace('{p}', pct), 6000); }
+        else { let xp = F.xpRate(S, true, false, false) * SANCT_XP_SEC; const got = xp; while (!capped() && xp > 0) { const need = F.xpNeed(S.L) - S.xp; if (xp >= need) { xp -= need; S.xp = 0; S.L++; } else { S.xp += xp; xp = 0; } } if (capped()) S.xp = 0; toast('⛩ ' + T('sanctAgain').replace('{x}', fmt(got)), 4500); }
+        pushLB(); }
+      save(); }
     else if (f.kind === 'mirror') { me.x = MIRROR_GATE.x; me.y = MIRROR_GATE.y + 150; S.mirrorCD = Date.now() + (f.result ? MIRROR_CD_WIN : MIRROR_CD_LOSE);
       if (f.result) { S.stats.mirrorWins = (S.stats.mirrorWins || 0) + 1; const got = (S.shards||0) < MAX_SHARDS; if (got) S.shards = (S.shards||0) + 1; toast('🪞 ' + (got ? T('mirrorWin') : T('mirrorWinMax')), 5000); pushLB(); }
       save(); }
@@ -541,14 +567,21 @@
 
   // ---------------- Update ----------------
   let saveT = 0, lbT = 0, announcedEv = -1; const roamFx = {}; const mirrorCh = { fx: {}, seed: 9 };
+  function canStand(x, y){
+    if (Math.abs(x) <= R.WORLD && Math.abs(y) <= R.WORLD) return true;
+    if (!S.sanctOpen) return false;
+    if (x >= R.WORLD - 200 && x <= SANCTUM.x && Math.abs(y - SANCTUM.y) <= SANCTUM.road) return true;
+    return Math.hypot(x - SANCTUM.x, y - SANCTUM.y) <= SANCTUM.radius;
+  }
   function updateWorld(dt){
     let dx = 0, dy = 0;
     if (keys['w'] || keys['arrowup']) dy -= 1; if (keys['s'] || keys['arrowdown']) dy += 1;
     if (keys['a'] || keys['arrowleft']) dx -= 1; if (keys['d'] || keys['arrowright']) dx += 1;
     if (joy.on && Math.hypot(joy.dx, joy.dy) > 8) { dx = joy.dx/60; dy = joy.dy/60; }
-    const m = Math.hypot(dx, dy); me.moving = m > 0.1;
+    const m = Math.hypot(dx, dy); me.moving = m > 0.1; const prevX = me.x, prevY = me.y;
     if (me.moving) { const sp = F.speed(S.t); me.x += dx/Math.max(1, m)*sp*dt; me.y += dy/Math.max(1, m)*sp*dt; S.stats.dist = (S.stats.dist || 0) + sp*dt*Math.min(1, m); if (Math.abs(dx) > 0.1) me.face = dx > 0 ? 1 : -1; me.phase += dt*11; }
-    me.x = Math.max(-R.WORLD, Math.min(R.WORLD, me.x)); me.y = Math.max(-R.WORLD, Math.min(R.WORLD, me.y));
+    if (!canStand(me.x, me.y)) { if (canStand(me.x, prevY)) me.y = prevY; else if (canStand(prevX, me.y)) me.x = prevX; else { me.x = prevX; me.y = prevY; } }
+    if (!canStand(me.x, me.y)) { me.x = Math.max(-R.WORLD, Math.min(R.WORLD, me.x)); me.y = Math.max(-R.WORLD, Math.min(R.WORLD, me.y)); }
     gainXP(dt);
     // discoveries
     WELLS.forEach(([x, y], i) => { if (!S.wells.includes(i) && Math.hypot(me.x - x, me.y - y) < 80) { S.wells.push(i); save(); sfx.find(); toast('💧 ' + T('wellFound')); } });
@@ -560,6 +593,10 @@
       if (Math.hypot(me.x - ev.x, me.y - ev.y) < 95) { S.buffEv = ev.idx; S.stats.events = (S.stats.events || 0) + 1; S.buffUntil = Date.now() + ev.type.min*60000; if (ev.type.resetRifts) { S.riftCD = {}; setTimeout(()=>toast('🩸 ' + T('riftsReset')), 1500); }
         save(); sfx.event(); flash(`hsl(${ev.type.h},100%,70%)`, 0.9); bigBanner(ev.type[S.lang], '×5', `hsl(${ev.type.h},100%,70%)`, '', T('eventGot').replace('{m}', ev.type.min)); }
     }
+    if (!S.sanctSeen && Math.hypot(me.x - SANCTUM.gate[0], me.y - SANCTUM.gate[1]) < 700) { S.sanctSeen = 1; save(); }
+    if (!S.sanctOpen && S.best >= SANCTUM.unlockTitle && Math.hypot(me.x - SANCTUM.gate[0], me.y - SANCTUM.gate[1]) < 110) { S.sanctOpen = 1; save(); sfx.title(); flash('#ffe9a0', 0.8); bigBanner('⛩ ' + T('sanctum'), T('sanctRoad'), '#ffd98a'); }
+    { const near = sanctCursedOpen(S) && Math.hypot(me.x - SANCTUM.x, me.y - SANCTUM.y) < 800, el = $('sanctBtn'); if (el.style.display !== (near ? 'block' : 'none')) el.style.display = near ? 'block' : 'none';
+      if (near) { const lbl = '⛩ ' + (S.sanctMode === 'cursed' ? T('sanctCursedOn') : T('sanctNormal')); if (el.textContent !== lbl) el.textContent = lbl; el.classList.toggle('red', S.sanctMode === 'cursed'); } }
     RIFTS.forEach(([x, y], i) => { S.riftSeen = S.riftSeen || []; if (!S.riftSeen.includes(i) && Math.hypot(me.x - x, me.y - y) < 700) { S.riftSeen.push(i); save(); } });
     // others
     for (const id in others) { const o = others[id]; const ox = o.x, oy = o.y; o.x += (o.tx - o.x)*Math.min(1, dt*10); o.y += (o.ty - o.y)*Math.min(1, dt*10);
@@ -592,6 +629,14 @@
         ctx.textAlign = 'center'; ctx.font = `700 ${Math.max(10, 12*cam.z)}px ${FONT}`; ctx.fillStyle = '#d9a6ff'; ctx.shadowColor = '#000'; ctx.shadowBlur = 5;
         ctx.fillText(`☠ ${S.lang === 'vi' ? r.B.vi : r.B.en}`, sx, sy - sz*1.25 - 8); ctx.shadowBlur = 0; } }); } }
     mirrorCh.t = S.t; mirrorCh.sk = S.sk; mirrorCh.as = S.as;
+    { const open = S.best >= SANCTUM.unlockTitle, road = !!S.sanctOpen, cur = sanctCursed(), [gx, gy] = SANCTUM.gate;
+      if (road && vis((gx + SANCTUM.x)/2, gy, 1800)) list.push({ y: -1e9, f: () => { R.sanctumRoad(ctx, w2s, cam.z, gx, SANCTUM.x - SANCTUM.radius + 60, gy, time); } });
+      if (road && vis(SANCTUM.x, SANCTUM.y, 900)) list.push({ y: -1e9 + 1, f: () => { const [sx, sy] = w2s(SANCTUM.x, SANCTUM.y); R.sanctumFloor(ctx, sx, sy, cam.z, time, cur); } });
+      if (vis(gx, gy, 300)) list.push({ y: gy, f: () => { const [sx, sy] = w2s(gx, gy); R.sanctumGate(ctx, sx, sy, cam.z, time, open, open ? `⛩ ${T('sanctum')}` : '⛩ ???'); } });
+      for (const sym of SYMBOLS) { const x = SANCTUM.x + sym.dx, y = SANCTUM.y + sym.dy; if (!road || !vis(x, y, 300)) continue;
+        list.push({ y, f: () => { const [sx, sy] = w2s(x, y), st = sanctState(sym), B = symbolBoss(sym, cur), key = B.id;
+          const sub = st === 'locked' ? (S.best < SANCTUM.unlockTitle ? T('sanctLocked') : T('sanctDragonLocked')) : st === 'cd' ? T('sanctCD').replace('{t}', mmss(S.sanctCD[key] - Date.now())) : (B.trait ? TRAITS[B.trait].ico + ' ' + TRAITS[B.trait][S.lang] + ' · ' : '') + ['☠☠☠', '☠☠', '☠', '✓'][sanctThreat(sym)] + ' ' + T('threat')[sanctThreat(sym)];
+          R.sanctumPedestal(ctx, sx, sy, cam.z, time, sym.id, st === 'cd' && S.sanct[key] ? 'done' : st, B[S.lang], sub, cur); } }); } }
     if (vis(MIRROR_GATE.x, MIRROR_GATE.y, 300)) list.push({ y: MIRROR_GATE.y, f: () => { const [sx, sy] = w2s(MIRROR_GATE.x, MIRROR_GATE.y); const rd = Date.now() >= (S.mirrorCD || 0);
       R.mirrorGate(ctx, sx, sy, cam.z, time, rd, `🪞 ${T('mirrorGate')}`, rd ? T('mirrorChance').replace('{p}', Math.round(mirrorChance(S)*100)) : T('mirrorCD').replace('{t}', mmss(S.mirrorCD - Date.now())), mirrorCh); } });
     const evw = eventAt(Date.now()); if (evw.active && vis(evw.x, evw.y, 500)) list.push({ y: evw.y, f: () => { const [sx, sy] = w2s(evw.x, evw.y); R.eventGate(ctx, sx, sy, cam.z, time, evw, evw.type[S.lang], S.buffEv === evw.idx); } });
@@ -627,6 +672,7 @@
     mctx.fillStyle = '#f33'; let [x, y] = p(GATE.x, GATE.y); mctx.fillRect(x - 3, y - 3, 6, 6);
     S.wells.forEach(i => { const [a, b] = p(...WELLS[i]); mctx.fillStyle = '#6fe'; mctx.beginPath(); mctx.arc(a, b, 3, 0, 7); mctx.fill(); });
     S.stelae.forEach(i => { const [a, b] = p(...STELAE[i]); mctx.fillStyle = '#ca6'; mctx.fillRect(a - 1.5, b - 1.5, 3, 3); });
+    if (S.sanctSeen) { const [a, b] = p(SANCTUM.gate[0], SANCTUM.gate[1]); mctx.fillStyle = sanctCursed() ? '#ff2a60' : '#ffd040'; mctx.font = 'bold 10px serif'; mctx.textAlign = 'center'; mctx.fillText('⛩', a, b + 4); }
     { const [a, b] = p(MIRROR_GATE.x, MIRROR_GATE.y); mctx.fillStyle = Date.now() >= (S.mirrorCD || 0) ? '#ff6a80' : '#555'; mctx.beginPath(); mctx.ellipse(a, b, 2.5, 4, 0, 0, 7); mctx.fill(); }
     (S.riftSeen || []).forEach(i => { const [a, b] = p(RIFTS[i][0], RIFTS[i][1]); mctx.fillStyle = riftReady(i) ? RIFT_RANKS[RIFTS[i][2]].c : '#555'; mctx.save(); mctx.translate(a, b); mctx.rotate(Math.PI/4); mctx.fillRect(-3, -3, 6, 6); mctx.restore(); });
     { const pool = unlockedBosses(S.t), now = Date.now(); for (let i = 0; i < ROAMERS.length; i++) { const r = roamerAt(i, now, pool); if (now < ((S.roamCD || {})[i] || 0) || Math.hypot(r.x - me.x, r.y - me.y) > 1400) continue;
@@ -656,7 +702,8 @@
     const lx = W*0.24, rx = W*0.72;
     // boss / right side
     if (boss) {
-      const S_ = Math.min(H*(f.tower ? 0.72 : 0.62), W*(f.tower ? 0.5 : 0.45)) * (f.tower ? Math.min(1.12, 0.9 + f.tower.fl/150) * (f.tower.guardian ? 1.12 : 1) : (0.85 + subOf(f.g)/20*0.25) * (isRealmEnd(f.g) ? 1.15 : 1));
+      const S0_ = Math.min(H*(f.tower ? 0.72 : 0.62), W*(f.tower ? 0.5 : 0.45)) * (f.tower ? Math.min(1.12, 0.9 + f.tower.fl/150) * (f.tower.guardian ? 1.12 : 1) : (0.85 + subOf(f.g)/20*0.25) * (isRealmEnd(f.g) ? 1.15 : 1));
+      const S_ = Math.min(S0_, floorY*0.74);
       // fog
       for (let i = 0; i < 4; i++) { const fx = (time*20*(i + 1) + i*300) % (W + 400) - 200; const g = ctx.createRadialGradient(fx, floorY - 40, 0, fx, floorY - 40, 260); g.addColorStop(0, `hsla(${f.hue},70%,20%,0.18)`); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(fx - 260, floorY - 300, 520, 520); }
       const lunge = f.Rt.atk > 0 ? -f.Rt.atk*40 : 0;
@@ -704,10 +751,14 @@
       if (f.phase === 'fight' && Math.floor(time*1.2) !== f._beat) { f._beat = Math.floor(time*1.2); sfx.beat(); } }
     ctx.restore();
     // v1.8 affix chips
-    if (f.tower) { ctx.textAlign = 'right'; ctx.font = `600 12px ${FONT}`; f.tower.aff.forEach((id, i) => { const A = AFFIXES.find(a => a.id === id); const txt = `${A.ico} ${A[S.lang]}`, w = ctx.measureText(txt).width + 16, x = W - 16, y = 100 + i*24;
-      ctx.fillStyle = 'rgba(40,0,10,0.75)'; ctx.fillRect(x - w, y - 15, w, 20); ctx.strokeStyle = '#ff5060'; ctx.strokeRect(x - w, y - 15, w, 20); ctx.fillStyle = '#ffd0d6'; ctx.fillText(txt, x - 8, y); });
-      ctx.textAlign = 'center'; ctx.font = `900 ${Math.max(14, 18*sc)}px ${FONT}`; ctx.fillStyle = `hsl(${(260 + Math.floor((f.tower.fl - 1)/10)*37) % 360},100%,75%)`; ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
+    { const chips = []; if (f.kind !== 'pvp' && f.B && f.B.trait && TRAITS[f.B.trait]) { const TT = TRAITS[f.B.trait]; chips.push([`${TT.ico} ${TT[S.lang]}`, '#ffb020', 'rgba(50,30,0,0.8)']); }
+      (f.aff || []).forEach(id => { const A = AFFIXES.find(a => a.id === id); if (A) chips.push([`${A.ico} ${A[S.lang]}`, '#ff5060', 'rgba(40,0,10,0.75)']); });
+      ctx.textAlign = 'right'; ctx.font = `600 12px ${FONT}`; chips.forEach(([txt, bc, bg], i) => { const w = ctx.measureText(txt).width + 16, x = W - 16, y = 100 + i*24;
+        ctx.fillStyle = bg; ctx.fillRect(x - w, y - 15, w, 20); ctx.strokeStyle = bc; ctx.strokeRect(x - w, y - 15, w, 20); ctx.fillStyle = '#ffe8d0'; ctx.fillText(txt, x - 8, y); }); }
+    if (f.tower) { ctx.textAlign = 'center'; ctx.font = `900 ${Math.max(14, 18*sc)}px ${FONT}`; ctx.fillStyle = `hsl(${(260 + Math.floor((f.tower.fl - 1)/10)*37) % 360},100%,75%)`; ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
       ctx.fillText('🗼 ' + T('towerFloor').replace('{n}', f.tower.fl), W/2, 30); ctx.shadowBlur = 0; }
+    if (f.kind === 'sanct') { ctx.textAlign = 'center'; ctx.font = `900 ${Math.max(14, 18*sc)}px ${FONT}`; ctx.fillStyle = f.B.cursed ? '#ff4a7a' : '#ffd98a'; ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
+      ctx.fillText('⛩ ' + T('sanctum') + (f.B.cursed ? ' · ' + T('sanctCursedOn') : ''), W/2, 30); ctx.shadowBlur = 0; }
     // intro text
     if (f.phase === 'intro') { ctx.textAlign = 'center'; ctx.font = `italic ${Math.max(16, 22*sc)}px ${FONT}`;
       f.intro.forEach((line, i) => { const t0 = i*1.3; const vis_ = Math.max(0, Math.min(line.length, Math.floor((f.timer - t0)*28))); ctx.fillStyle = boss ? '#d8c8c8' : '#fff'; ctx.fillText(line.slice(0, vis_), W/2, H*0.18 + i*34*sc); }); }

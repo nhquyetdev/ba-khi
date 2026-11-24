@@ -1,6 +1,6 @@
 // GodK Bá Khí v1.0 — data: titles, tiers, bosses, i18n, formulas
 'use strict';
-const GAME_VERSION = '1.8';
+const GAME_VERSION = '2.0';
 const FONT = "'Be Vietnam Pro', 'Segoe UI', Roboto, Arial, sans-serif";
 const SAVE_KEY = 'godk_ba_khi_save_v1';
 
@@ -126,10 +126,12 @@ const F = {
   levelCap: t => LV_PER_TITLE * t,
   xpNeed: L => Math.floor(4 * Math.pow(L, 1.3) + 12), // v1.1: ×2 to offset events/rifts
   xpRate: (s, moving, inWell, buff) => (1 + s.R) * (1 + 0.08 * s.L) * (moving ? 2 : 1) * (inWell ? 1.5 : 1) * (1 + 0.05 * (s.stelae ? s.stelae.length : 0)) * (1 + 0.01 * (s.marks || 0)) * (buff ? 5 : 1),
-  statMult: (t, E, M, Sh) => (1 + 0.035 * E) * Math.pow(1.01, t) * (1 + 0.005 * (M || 0)) * (1 + 0.03 * (Sh || 0)),
-  stats(L, t, E, M, Sh){ const m = F.statMult(t, E, M, Sh); return { hp: (120 + 30*L)*m, atk: (12 + 3.2*L)*m, def: (3 + 0.7*L)*m, crit: 0.10 + Math.min(0.15, E*0.0005) }; },
+  statMult: (t, E, M, Sh, Sb) => F.essMult(E) * Math.pow(1.01, t) * (1 + 0.005 * (M || 0)) * (1 + 0.03 * (Sh || 0)) * (1 + (Sb || 0)),
+  stats(L, t, E, M, Sh, Sb){ const m = F.statMult(t, E, M, Sh, Sb); return { hp: (120 + 30*L)*m, atk: (12 + 3.2*L)*m, def: (3 + 0.7*L)*m, crit: 0.10 + Math.min(0.15, E*0.0005) }; },
   boss(g){ const L = LV_PER_TITLE*g; const b = F.stats(L, g, 0); const D = 0.85*Math.pow(1.017, g)*(isRealmEnd(g) ? 1.5 : 1)*(g > 250 ? 1.15 : 1)*(g === MAX_TITLE - 1 ? 1.5 : 1); // v1.5 (+v1.6 final gate ×1.5): 300 titles (~21h active, ~9 rebirths)
     return { hp: b.hp*D*1.6, atk: b.atk*D*0.7, def: b.def*D, crit: 0.08 }; },
+  // v2.0: Essence now has diminishing returns (was linear 1 + 0.035·E). 540 Essence: ×19.9 → ×4.8 stats.
+  essMult: E => 1 + 0.09 * Math.pow(Math.max(0, E || 0), 0.61),
   essence: t => Math.floor(Math.pow(t, 1.5) / 5), // v1.5: /5 → more rebirths
   dmg: (a, d) => a*a/(a+d),
   REBIRTH_MIN_TITLE: 25, // end of realm 1
@@ -254,9 +256,11 @@ function bossFor(g){
     return pool[(g*5) % pool.length];
   }
   if (isRealmEnd(g)) return BOSSES[ti];
+  if (g === 1) return BOSSES[0]; // the first gate is always The Hollow
   const pool = [BOSSES[ti]]; for (let k = 0; k < 6; k++) pool.push(EXTRA_BOSSES[(ti*6 + k) % n]);
   if (ti > 0) pool.push(BOSSES[ti - 1]);
-  return pool[(g*5) % pool.length]; // step 5 so neighbouring gates differ
+  pool.push(TRAIT_BOSSES[ti % 3]); if (ti >= 3) pool.push(ARCHANGELS[ti % 2]); // v1.9
+  return pool[(g*7) % pool.length]; // stride coprime with pool size so every boss appears
 }
 function bossForm(g){ if (g >= MAX_TITLE) return towerForm(towerFloor(g)); const ti = tierOf(g); if (g === MAX_TITLE - 1) return BOSS_FORMS.length - 1; if (ti >= 10) return Math.min(BOSS_FORMS.length - 2, 9 + Math.min(3, ti - 10)); return Math.min(8, Math.floor(ti*0.8 + ((subOf(g) - 1)/7))); }
 function unlockedBosses(t){ const ti = Math.min(9, tierOf(t)); const out = BOSSES.slice(0, ti + 1).concat(EXTRA_BOSSES.slice(0, Math.min(EXTRA_BOSSES.length, ti*6 + 6)));
@@ -327,7 +331,7 @@ const I18N = {
     unknown:'???', locked:'Not yet discovered',
     rebirthTitle:'Rebirth', rebirthDesc:'Your level and aura title return to the beginning. In exchange you keep forever:',
     rebirthGain:'Essence gained', rebirthDo:'Be Reborn', rebirthLocked:'Something sleeps inside you. Grow stronger to awaken it.',
-    rebirthEffect:'+{x} permanent Essence (each = +3.5% all stats), aura gain ×{m} total',
+    rebirthEffect:'+{x} permanent Essence: all stats ×{a} → ×{b}, aura gain ×{m} total', essBonus:'Essence bonus', sanctRoad:'The road to the Sanctum has opened!', sanctUnknown:'???',
     fightStart:'FIGHT', victory:'VICTORY', defeat:'DEFEAT', newTitle:'NEW AURA TITLE', gateBroken:'Gate shattered',
     bossLoseHint:'Too weak. Level is capped — perhaps it is time to be reborn…',
     inspect:'Inspect', challenge:'Challenge (PvP)', pvpReq:'{n} challenges you to a duel!', accept:'Accept', decline:'Decline', pvpDeclined:'Duel declined.', pvpWaiting:'Waiting for answer…',
@@ -344,9 +348,10 @@ const I18N = {
     wardrobe:'Wardrobe', tabAura:'Auras', tabNick:'Nicknames', tabSkin:'Skins', equipped:'Equipped', equip:'Equip', locked:'Locked', unlockedNew:'Unlocked: {n}!', nickname:'Nickname', skin:'Skin', auraStyle:'Aura',
     pvpCooldown:'Duel requests on cooldown: {t}', pvpSeen:'{n} received your challenge…', pvpTimeout:'No answer. You can challenge again in 1 minute.', pvpDeclinedCD:'Duel declined. You can challenge again in 1 minute.', pvpBusy:'They are busy fighting — the request will wait.',
     gateSkip:'Conquered gate — passed automatically', speed:'Speed',
+    trait:'Trait', sanctum:'Four Symbols Sanctum', sanctLocked:'Sealed — reach realm 4 to break the seal', sanctEnter:'Challenge', sanctDragonLocked:'Defeat the Four Symbols first', sanctFirst:'First clear! +{p}% all stats forever', sanctAgain:'Defeated again! +{x} aura', threat:['Deadly','Very hard','Hard','Within reach'], sanctCD:'Resting ({t})', sanctCursedOn:'Curse mode', sanctNormal:'Normal', sanctCursedLocked:'The curse awakens after GODK and the Yellow Dragon', sanctBonus:'Sanctum blessing', sanctPath:'Sanctum Path',
     towerFloor:'GodK Tower · Floor {n}', towerGuardian:'TOWER GUARDIAN', affixes:'This week', towerBest:'Tower: highest floor', towerNext:'Next floor {n}: {a}', weeklyReset:'Affixes change in {t}',
     bestiary:'Bestiary', bDiscovered:'Discovered {a} / {b}', bKills:'Defeated: {n}', bSeen:'Encountered', bWhere:'Found at', bLocked:'Not yet encountered',
-    whereGate:'Dungeon Gate', whereTower:'GodK Tower', whereRift:'Rift Gate', whereRoam:'Wandering', whereMirror:'Mirror Gate', whereFinal:'Final Gate',
+    whereGate:'Dungeon Gate', whereTower:'GodK Tower', whereRift:'Rift Gate', whereRoam:'Wandering', whereMirror:'Mirror Gate', whereFinal:'Final Gate', whereSanct:'Four Symbols Sanctum',
     reachHidden:'Reach title ???', defeatHidden:'Defeat ???',
     memory:'Memory: {r}', replayEnding:'Watch the ending again', skip:'Skip',
     mirrorGate:'Mirror Gate', enterMirror:'Face your Reflection', mirrorChance:'Win chance: {p}%', mirrorWin:'You defeated yourself! +1 Mirror Shard (+3% all stats)', mirrorWinMax:'You defeated yourself again! (Shards maxed)', mirrorLose:'Your Reflection won. The mirror will open again in 3 minutes.', shards:'Mirror Shards', mirrorCD:'The mirror is clouded ({t})',
@@ -365,7 +370,7 @@ const I18N = {
     unknown:'???', locked:'Chưa khám phá',
     rebirthTitle:'Tái Sinh', rebirthDesc:'Cấp độ và danh hiệu trở về khởi điểm. Đổi lại bạn giữ vĩnh viễn:',
     rebirthGain:'Tinh hoa nhận được', rebirthDo:'Tái Sinh', rebirthLocked:'Có thứ gì đó đang ngủ trong bạn. Mạnh hơn nữa để đánh thức nó.',
-    rebirthEffect:'+{x} Tinh hoa vĩnh viễn (mỗi điểm = +3.5% mọi chỉ số), bá khí ×{m} tổng',
+    rebirthEffect:'+{x} Tinh hoa vĩnh viễn: mọi chỉ số ×{a} → ×{b}, bá khí ×{m} tổng', essBonus:'Thưởng Tinh hoa', sanctRoad:'Con đường tới Thánh Địa đã mở!', sanctUnknown:'???',
     fightStart:'CHIẾN', victory:'CHIẾN THẮNG', defeat:'THẤT BẠI', newTitle:'DANH HIỆU MỚI', gateBroken:'Cổng đã vỡ',
     bossLoseHint:'Quá yếu. Cấp đã chạm trần — có lẽ đã đến lúc tái sinh…',
     inspect:'Xem', challenge:'Thách đấu (PvP)', pvpReq:'{n} thách đấu bạn!', accept:'Nhận', decline:'Từ chối', pvpDeclined:'Đối thủ từ chối.', pvpWaiting:'Đang chờ trả lời…',
@@ -382,9 +387,10 @@ const I18N = {
     wardrobe:'Tủ Đồ', tabAura:'Hào quang', tabNick:'Biệt hiệu', tabSkin:'Trang phục', equipped:'Đang dùng', equip:'Dùng', locked:'Chưa mở', unlockedNew:'Mở khóa: {n}!', nickname:'Biệt hiệu', skin:'Trang phục', auraStyle:'Hào quang',
     pvpCooldown:'Thách đấu đang hồi: {t}', pvpSeen:'{n} đã nhận được lời thách đấu…', pvpTimeout:'Không có phản hồi. Có thể thách đấu lại sau 1 phút.', pvpDeclinedCD:'Đối thủ từ chối. Có thể thách đấu lại sau 1 phút.', pvpBusy:'Đối thủ đang đánh boss — lời mời sẽ chờ.',
     gateSkip:'Cổng đã chinh phục — tự động vượt qua', speed:'Tốc độ',
+    trait:'Đặc tính', sanctum:'Tứ Tượng Thánh Địa', sanctLocked:'Đang phong ấn — đạt cảnh giới 4 để phá ấn', sanctEnter:'Khiêu chiến', sanctDragonLocked:'Hạ đủ Tứ Tượng trước', sanctFirst:'Lần đầu chinh phục! +{p}% mọi chỉ số vĩnh viễn', sanctAgain:'Lại chiến thắng! +{x} bá khí', threat:['Chết chắc','Rất khó','Khó','Vừa sức'], sanctCD:'Đang nghỉ ({t})', sanctCursedOn:'Chế độ Nguyền Rủa', sanctNormal:'Thường', sanctCursedLocked:'Lời nguyền thức tỉnh sau GODK và Hoàng Long', sanctBonus:'Phúc lành Thánh Địa', sanctPath:'Đường Thánh Địa',
     towerFloor:'Tháp GodK · Tầng {n}', towerGuardian:'HỘ VỆ THÁP', affixes:'Tuần này', towerBest:'Tháp: tầng cao nhất', towerNext:'Tầng {n}: {a}', weeklyReset:'Đổi hiệu ứng sau {t}',
     bestiary:'Bách Khoa Boss', bDiscovered:'Đã gặp {a} / {b}', bKills:'Đã hạ: {n}', bSeen:'Đã chạm trán', bWhere:'Xuất hiện ở', bLocked:'Chưa gặp',
-    whereGate:'Cổng Ngục', whereTower:'Tháp GodK', whereRift:'Cổng Hoang', whereRoam:'Tà Ảnh lang thang', whereMirror:'Cổng Gương', whereFinal:'Cổng Cuối',
+    whereGate:'Cổng Ngục', whereTower:'Tháp GodK', whereRift:'Cổng Hoang', whereRoam:'Tà Ảnh lang thang', whereMirror:'Cổng Gương', whereFinal:'Cổng Cuối', whereSanct:'Tứ Tượng Thánh Địa',
     reachHidden:'Đạt danh hiệu ???', defeatHidden:'Đánh bại ???',
     memory:'Ký ức: {r}', replayEnding:'Xem lại màn kết', skip:'Bỏ qua',
     mirrorGate:'Cổng Gương', enterMirror:'Đối mặt Bóng Gương', mirrorChance:'Cơ hội thắng: {p}%', mirrorWin:'Ngươi đã thắng chính mình! +1 Mảnh Gương (+3% mọi chỉ số)', mirrorWinMax:'Ngươi lại thắng chính mình! (Mảnh Gương đã tối đa)', mirrorLose:'Bóng Gương đã thắng. Gương sẽ mở lại sau 3 phút.', shards:'Mảnh Gương', mirrorCD:'Gương đang mờ ({t})',
@@ -400,10 +406,10 @@ const REQ_TEXT = {
   free: { en:'Free', vi:'Miễn phí' }, best: { en:'Reach realm {c} (title #{v})', vi:'Đạt cảnh giới {c} (danh hiệu #{v})' }, R: { en:'Rebirth {v} times', vi:'Tái sinh {v} lần' },
   pvpW: { en:'Win {v} PvP duels', vi:'Thắng {v} trận PvP' }, bossWins: { en:'Defeat {v} Dungeon Gate bosses', vi:'Hạ {v} boss Cổng Ngục' }, riftWins: { en:'Conquer {v} Rift Gates', vi:'Chinh phục {v} Cổng Hoang' },
   roamWins: { en:'Banish {v} Wandering Horrors', vi:'Xua tan {v} Tà Ảnh' }, events: { en:'Enter {v} ×5 event gates', vi:'Vào {v} cổng sự kiện ×5' }, wells: { en:'Find {v} Aura Wells', vi:'Tìm {v} Giếng Bá Khí' },
-  stelae: { en:'Find {v} Ancient Stelae', vi:'Tìm {v} Bia Cổ' }, finalWins: { en:'Defeat the Last Reflection', vi:'Đánh bại Bóng Gương Tối Hậu' }, mirrorWins: { en:'Defeat your Reflection {v} times', vi:'Đánh bại Bóng Gương {v} lần' }, marks: { en:'Own {v} Conquest Marks', vi:'Sở hữu {v} Ấn Chinh Phục' }, dist: { en:'Travel {v} distance', vi:'Di chuyển quãng đường {v}' },
+  stelae: { en:'Find {v} Ancient Stelae', vi:'Tìm {v} Bia Cổ' }, sanctN: { en:'Conquer the Four Symbols Sanctum', vi:'Chinh phục Tứ Tượng Thánh Địa' }, sanctC: { en:'Break the Sanctum curse', vi:'Phá lời nguyền Thánh Địa' }, finalWins: { en:'Defeat the Last Reflection', vi:'Đánh bại Bóng Gương Tối Hậu' }, mirrorWins: { en:'Defeat your Reflection {v} times', vi:'Đánh bại Bóng Gương {v} lần' }, marks: { en:'Own {v} Conquest Marks', vi:'Sở hữu {v} Ấn Chinh Phục' }, dist: { en:'Travel {v} distance', vi:'Di chuyển quãng đường {v}' },
 };
 function reqProgress(S, req){ const st = S.stats || {}; const [k, v] = req;
-  const cur = k === 'free' ? 1 : k === 'best' ? S.best : k === 'R' ? S.R : k === 'pvpW' ? S.pvpW : k === 'wells' ? (S.wells||[]).length : k === 'stelae' ? (S.stelae||[]).length : k === 'marks' ? (S.marks||0) : (st[k] || 0);
+  const cur = k === 'sanctN' ? SYMBOLS.filter(x => (S.sanct||{})[x.id]).length : k === 'sanctC' ? SYMBOLS.filter(x => (S.sanct||{})[x.id + '_c']).length : k === 'free' ? 1 : k === 'best' ? S.best : k === 'R' ? S.R : k === 'pvpW' ? S.pvpW : k === 'wells' ? (S.wells||[]).length : k === 'stelae' ? (S.stelae||[]).length : k === 'marks' ? (S.marks||0) : (st[k] || 0);
   return [cur, k === 'free' ? 1 : v]; }
 function reqMet(S, req){ const [c, v] = reqProgress(S, req); return c >= v; }
 function reqText(req, lang){ const [k, v] = req; return REQ_TEXT[k][lang].replace('{v}', k === 'dist' ? (v/1000) + 'K' : v).replace('{c}', k === 'best' ? (tierOf(v) + 1) : ''); }
@@ -425,6 +431,8 @@ const AURA_SKINS = [
   { id:'ego',      en:'Destroyer Ego',     vi:'Bản Ngã Hủy Diệt',     req:['pvpW',20],    over:{ h:285, s:90, l:55, oh:300, os:100, darkCore:1, lightning:1, embers:2 } },
   { id:'solar',    en:'Solar Flare',       vi:'Thái Dương Hỏa',       req:['best',OT(150)],   over:{ h:30, s:100, l:62, oh:15, os:100, rays:1, embers:3 } },
   { id:'shattered',en:'Shattered Mirror',  vi:'Gương Vỡ Vô Lượng',    req:['finalWins',1],over:{ h:350, s:85, l:72, oh:195, os:90, glass:1, afterimage:1, lightning:1, halo:1, embers:2 } }, // v1.6 final-boss reward
+  { id:'foursym',  en:'Four Symbols',      vi:'Tứ Tượng Hộ Thể',      req:['sanctN',5],   over:{ h:48, s:100, l:62, oh:165, os:100, foursym:1, embers:2, halo:1 } },
+  { id:'cursedking',en:'Cursed Emperor',   vi:'Huyết Long Nguyền',    req:['sanctC',5],   over:{ h:285, s:90, l:45, oh:350, os:100, darkCore:1, foursym:2, lightning:1, embers:3 } },
   { id:'prism',    en:'Prism Unlimited',   vi:'Vô Lượng Lăng Kính',   req:['best',OT(200)],   over:{ h:0, s:100, l:65, oh:0, os:100, rainbow:1, rays:1, halo:1, stars:1 } },
 ];
 // Nicknames (secondary titles shown above your name)
@@ -450,6 +458,8 @@ const NICKS = [
   { id:'eclipse',     en:'Eclipse Bearer',      vi:'Kẻ Mang Nhật Thực',     req:['best',OT(203)] },
   { id:'paradox',     en:'Living Paradox',      vi:'Nghịch Lý Sống',        req:['best',OT(222)] },
   { id:'godk',        en:'GodK',                vi:'GodK',                  req:['best',MAX_TITLE] },
+  { id:'dragonslayer',en:'Dragon Emperor\'s Bane', vi:'Kẻ Hạ Hoàng Long',  req:['sanctN',5] },
+  { id:'cursebreaker',en:'Curse Breaker',        vi:'Kẻ Phá Lời Nguyền',  req:['sanctC',5] },
   { id:'mirrorbreaker',en:'Mirror Breaker',     vi:'Kẻ Vượt Gương',         req:['finalWins',1] },
   { id:'self',        en:'Self-Conqueror',      vi:'Kẻ Vượt Qua Chính Mình', req:['mirrorWins',1] },
   { id:'mirrormaster',en:'Master of Mirrors',   vi:'Chủ Nhân Của Gương',    req:['mirrorWins',5] },
@@ -490,12 +500,13 @@ const TOWER_GUARDIANS = [
   { id:'leviathan',  en:'The Void Leviathan',      vi:'Hư Không Cự Kình',        hue: 260, intro:{en:['The floor is gone. So is the sky.','Something vast is swimming through nothing.'],vi:['Mặt sàn biến mất. Bầu trời cũng vậy.','Có thứ gì khổng lồ đang bơi trong hư không.']}},
   { id:'othergodk',  en:'GodK of Another World',   vi:'GodK Dị Giới',            hue: 0,   intro:{en:['In another world, someone also reached 300.','They did not stop there.'],vi:['Ở một thế giới khác, có kẻ cũng đã đạt 300.','Kẻ đó đã không dừng lại.']}},
 ];
+// floors 70 and 80: the cursed archangels (defined below) join the guardian rotation
 function towerBoss(fl){
   if (fl % 10 === 0) return TOWER_GUARDIANS[(fl/10 - 1) % TOWER_GUARDIANS.length];
   const pool = HIGH_BOSSES.concat(UNLIMITED_BOSSES, [BOSSES[9], BOSSES[10]], EXTRA_BOSSES.filter(b => ['demoncult','bloodsword','reaper','bonedragon','hydra','sphinx','oni','tiangou'].includes(b.id)));
   let h = (fl*2654435761) >>> 0; return pool[h % pool.length];
 }
-const towerCycle = fl => Math.floor((fl - 1)/60); // guardians return stronger every 60 floors
+const towerCycle = fl => Math.floor((fl - 1)/(TOWER_GUARDIANS.length*10)); // guardians return stronger each full cycle
 const towerForm = fl => [9, 10, 11, 12][Math.min(3, Math.floor((fl - 1)/15))];
 function towerBossName(B, fl, lang){ const n = lang === 'vi' ? B.vi : B.en; const c = towerCycle(fl); return c > 0 ? `${n} ${roman(c + 1)}` : n; }
 
@@ -522,4 +533,51 @@ function towerAffixes(fl, now){
 }
 
 // Bestiary: every boss in the game (new arrays added later appear automatically)
-const bestiaryList = () => BOSSES.concat(EXTRA_BOSSES, UNLIMITED_BOSSES, HIGH_BOSSES, [MIRROR_BOSS, FINAL_MIRROR], TOWER_GUARDIANS);
+const bestiaryList = () => BOSSES.concat(EXTRA_BOSSES, typeof TRAIT_BOSSES !== 'undefined' ? TRAIT_BOSSES.concat(ARCHANGELS) : [], UNLIMITED_BOSSES, HIGH_BOSSES, [MIRROR_BOSS, FINAL_MIRROR], TOWER_GUARDIANS, typeof SYMBOLS !== 'undefined' ? SYMBOLS.concat(SYMBOLS.map(x => symbolBoss(x, 1))) : []);
+
+
+// ===================== v1.9 boss TRAITS =====================
+// multipliers on hp / atk / def (balanced by simulation: ~15–20% harder; archangels ~30% harder)
+const TRAITS = {
+  hp:      { ico:'❤', en:'Colossal HP',      vi:'Máu cực cao',     m:[2.2, 0.7, 0.85] },
+  def:     { ico:'🛡', en:'Iron Defense',     vi:'Thủ cực cao',     m:[1.15, 0.75, 3.6] },
+  atk:     { ico:'⚔', en:'Brutal Attack',    vi:'Công cực cao',    m:[0.65, 1.75, 0.85] },
+  archatk: { ico:'🗡', en:'Annihilating Attack', vi:'Công hủy diệt', m:[0.7, 2.1, 0.9] },
+  archdef: { ico:'🏰', en:'Unbreakable Defense', vi:'Thủ bất hoại',  m:[1.5, 0.65, 5.0] },
+};
+function applyTrait(st, B){ const T_ = B && B.trait && TRAITS[B.trait]; if (!T_) return st; const [h, a, d] = T_.m; return Object.assign({}, st, { hp: st.hp*h, atk: st.atk*a, def: st.def*d }); }
+const TRAIT_BOSSES = [
+  { id:'lich',     trait:'hp',  en:'The Undying Lich King', vi:'Bất Diệt Thi Vương', hue: 160, intro:{en:['It has died a thousand times.','It did not notice.'],vi:['Nó đã chết cả nghìn lần.','Nó chẳng hề để ý.']}},
+  { id:'ironarmor',trait:'def', en:'The Iron Demon God',    vi:'Thiết Giáp Ma Thần',  hue: 210, intro:{en:['A fortress learned to walk.','Your strikes ring like bells on its armor.'],vi:['Một tòa thành đã học cách bước đi.','Đòn đánh của ngươi vang như chuông trên giáp nó.']}},
+  { id:'berserker',trait:'atk', en:'The Mad Blade Demon',   vi:'Cuồng Đao Quỷ',      hue: 0,   intro:{en:['It does not defend.','It does not need to.'],vi:['Nó không phòng thủ.','Nó không cần phải thế.']}},
+];
+const ARCHANGELS = [
+  { id:'archwrath', trait:'archatk', en:'Archangel of Ruin',     vi:'Thiên Sứ Hủy Diệt', hue: 45,  intro:{en:['Six wings. One flaming sword.','Judgement does not miss.'],vi:['Sáu cánh. Một thanh kiếm lửa.','Phán quyết không bao giờ trượt.']}},
+  { id:'archward',  trait:'archdef', en:'Archangel of the Aegis',vi:'Thiên Sứ Thủ Hộ',   hue: 200, intro:{en:['A wall of light stands before you.','Nothing has ever passed it.'],vi:['Một bức tường ánh sáng chắn trước mặt.','Chưa thứ gì từng vượt qua.']}},
+];
+// cursed archangels — Tower Guardians of floors 70 and 80
+const CURSED_ARCHANGELS = [
+  { id:'archwrath_c', base:'archwrath', cursed:1, trait:'archatk', aff:['enrage'], en:'Fallen Archangel of Ruin', vi:'Thiên Sứ Hủy Diệt · Nguyền Rủa', hue: 0, intro:{en:['Its halo has turned to thorns.','Its sword now burns black.'],vi:['Vầng hào quang đã hóa thành gai.','Thanh kiếm giờ cháy lửa đen.']}},
+  { id:'archward_c',  base:'archward',  cursed:1, trait:'archdef', aff:['regen'],  en:'Fallen Archangel of the Aegis', vi:'Thiên Sứ Thủ Hộ · Nguyền Rủa', hue: 280, intro:{en:['The wall of light is bleeding.','It will not fall. It cannot.'],vi:['Bức tường ánh sáng đang rỉ máu.','Nó sẽ không ngã. Nó không thể ngã.']}},
+];
+TOWER_GUARDIANS.push(...CURSED_ARCHANGELS);
+
+// ===================== v1.9 Four Symbols Sanctum (super dungeon) =====================
+// v2.0: the Sanctum lies OUTSIDE the square map (east). The gate is inside; the road appears only after you qualify and step through it.
+const SANCTUM = { x: 6100, y: -2600, gate: [3860, -2600], unlockTitle: 76, road: 130, radius: 600 };
+const SYMBOLS = [ // dx, dy from sanctum center; aff = signature mechanic
+  { id:'azure',   dx:  0,   dy:-380, trait:'hp',  aff:['leech'],  en:'Azure Dragon of the East',   vi:'Thanh Long',  hue: 165, intro:{en:['Spring wind. Endless scales.','It drinks the life from everything it touches.'],vi:['Gió xuân. Vảy dài bất tận.','Nó hút sinh khí của mọi thứ nó chạm vào.']}},
+  { id:'tiger',   dx:  430, dy:   0, trait:'atk', aff:['twin'],   en:'White Tiger of the West',    vi:'Bạch Hổ',     hue: 0,   intro:{en:['Autumn steel. A roar like a blade.','It strikes twice before you blink.'],vi:['Thép mùa thu. Tiếng gầm như lưỡi đao.','Nó vồ hai lần trước khi ngươi kịp chớp mắt.']}},
+  { id:'phoenix', dx:  0,   dy: 380, trait:null,  aff:['regen','crit'], en:'Vermilion Bird of the South', vi:'Chu Tước', hue: 15,  intro:{en:['Summer fire. Wings of the sun.','Every ember of it is reborn.'],vi:['Lửa mùa hạ. Đôi cánh mặt trời.','Mỗi tàn lửa của nó đều tái sinh.']}},
+  { id:'tortoise',dx: -430, dy:   0, trait:'def', aff:['shield'], en:'Black Tortoise of the North', vi:'Huyền Vũ',    hue: 200, intro:{en:['Winter water. A shell older than mountains.','A serpent coils around it, watching.'],vi:['Nước mùa đông. Mai rùa già hơn núi non.','Một con rắn quấn quanh nó, theo dõi.']}},
+  { id:'yellowdragon', dx: 0, dy: 0, center:1, trait:'hp', aff:['enrage','armor'], en:'Yellow Dragon of the Center', vi:'Hoàng Long', hue: 48, intro:{en:['The four bow their heads.','The Emperor of all dragons descends to the center.'],vi:['Tứ Tượng cúi đầu.','Hoàng đế của muôn rồng giáng xuống trung tâm.']}},
+];
+// v1.9b: FIXED strength (gate-boss equivalent title) — no longer scales with your current title, so rebirthing can't trivialise it.
+// v1.9.2: calibrated on POWER vs play time with the strongest strategy (rebirth every ~2 min), not on rebirth count:
+// Four Symbols ~12h, Yellow Dragon ~16h, cursed Symbols ~28h, cursed Dragon ~36h. Players who only rebirth when stuck: ~18h / ~29h / >45h.
+const SANCT_REF = { normal: [224, 264], cursed: [356, 382] }; // [four symbols, Yellow Dragon] — v2.0 recalibrated for the new Essence curve
+const SANCT_CD_WIN = 10*60*1000, SANCT_CD_LOSE = 90*1000, SANCT_XP_SEC = 150;
+const SANCT_BONUS = { normal: [0.02, 0.05], cursed: [0.04, 0.10] }; // permanent all-stat bonus on first clear (each symbol / dragon)
+const symbolBoss = (sym, cursed) => cursed ? Object.assign({}, sym, { id: sym.id + '_c', base: sym.id, cursed: 1, aff: sym.aff.concat(['void']), en: sym.en.replace(/ of the .*/, '') + ' · Cursed', vi: sym.vi + ' · Nguyền Rủa', intro: { en: ['A curse has soaked into the ' + (sym.center ? 'emperor' : 'guardian') + '.', 'Its eyes are no longer its own.'], vi: ['Lời nguyền đã ngấm vào ' + (sym.center ? 'vị hoàng đế' : 'vị thủ vệ') + '.', 'Đôi mắt ấy không còn là của nó nữa.'] } }) : sym;
+function sanctBonus(S){ const s = S.sanct || {}; let b = 0; for (const sym of SYMBOLS) { if (s[sym.id]) b += SANCT_BONUS.normal[sym.center ? 1 : 0]; if (s[sym.id + '_c']) b += SANCT_BONUS.cursed[sym.center ? 1 : 0]; } return b; }
+const sanctCursedOpen = S => S.best >= MAX_TITLE && !!(S.sanct || {}).yellowdragon;
