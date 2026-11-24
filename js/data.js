@@ -1,6 +1,6 @@
 // GodK Bá Khí v1.0 — data: titles, tiers, bosses, i18n, formulas
 'use strict';
-const GAME_VERSION = '1.11.2';
+const GAME_VERSION = '2.3';
 const ASCEND_FROM = 30, ASCEND_K = 0.013, R1_END = 25, R1_HP = 0.96; // v1.11.2: gate 26+ = exactly v2.2 difficulty; only realm 1 (1–25) eased // v1.11: gates 1–200 = original difficulty; Boss Ascension + Transformation only from gate 201
 const FONT = "'Be Vietnam Pro', 'Segoe UI', Roboto, Arial, sans-serif";
 const SAVE_KEY = 'godk_ba_khi_save_v1';
@@ -355,7 +355,7 @@ const I18N = {
     wardrobe:'Wardrobe', tabAura:'Auras', tabNick:'Nicknames', tabSkin:'Skins', equipped:'Equipped', equip:'Equip', locked:'Locked', unlockedNew:'Unlocked: {n}!', nickname:'Nickname', skin:'Skin', auraStyle:'Aura',
     pvpCooldown:'Duel requests on cooldown: {t}', pvpSeen:'{n} received your challenge…', pvpTimeout:'No answer. You can challenge again in 1 minute.', pvpDeclinedCD:'Duel declined. You can challenge again in 1 minute.', pvpBusy:'They are busy fighting — the request will wait.',
     gateSkip:'Conquered gate — passed automatically', speed:'Speed',
-    trait:'Trait', mechTransform:'Transformation: heals {h}% HP, +{a}% attack at half HP', awaken:'AWAKENING', sanctum:'Four Symbols Sanctum', sanctLocked:'Sealed — reach realm 4 to break the seal', sanctEnter:'Challenge', sanctDragonLocked:'Defeat the Four Symbols first', sanctFirst:'First clear! +{p}% all stats forever', sanctAgain:'Defeated again! +{x} aura', threat:['Deadly','Very hard','Hard','Within reach'], sanctCD:'Resting ({t})', sanctCursedOn:'Curse mode', sanctNormal:'Normal', sanctCursedLocked:'The curse awakens after GODK and the Yellow Dragon', sanctBonus:'Sanctum blessing', sanctPath:'Sanctum Path',
+    trait:'Trait', mechTransform:'Transformation: heals {h}% HP, +{a}% attack at half HP', awaken:'AWAKENING', sanctum:'Four Symbols Sanctum', sanctLocked:'Sealed — reach realm 4 to break the seal', sanctEnter:'Challenge', sanctDragonLocked:'Defeat the Four Symbols first', sanctFirst:'First clear! +{p}% all stats forever', sanctAgain:'Defeated again! +{x} aura', threat:['Deadly','Very hard','Hard','Within reach'], sanctCD:'Resting ({t})', sanctCursedOn:'Curse mode', sanctNormal:'Normal', sanctCursedLocked:'The curse awakens after GODK and the Yellow Dragon', sanctBonus:'Sanctum blessing', sanctPath:'Sanctum Path', sanctNM:'Nightmare mode', hellFloor:'Hell · Floor {n}', bossTalents:'Boss talents', bossTalentsD:'From Tower floor 81 (Hell) bosses carry talents just like yours (see the Talents tab). Their rank rises with the floor. Shown on the HUD before you enter.', deformed:'Deformed', xeno:'Xeno Isle', xenoLocked:'Reach GODK to answer the signal', xenoGate:'Xeno Gate', xenoChallenge:'Challenge', xenoOpen:'The bridge to Xeno Isle has appeared!', xenoBack:'⇄ Back to Map 1 gate', xenoGo:'🛸 To Xeno Isle', xenoLv:'Xeno Lv {n}', xenoUp:'Xeno level {n}! +1% crit, +2% all stats', xenoCrater:'Crystal crater ×3', xenoRes:'Resonance ×{n}', xenoCore:'Mothership Core', xenoSpire:'Signal Spire', xenoNext:'Next: {n}', xenoDone:'All cleared', xenoReward:'Reward: {r}', xenoSlot:'+1 talent slot', xenoFirst:'Defeated {n}! {r}', xenoAgain:'Defeated again! +{x} aura', xenoBonus:'Xeno bonus', immune:'IMMUNE', guide:'Handbook', gStats:'Stats', gTraits:'Boss traits', gMech:'Boss mechanics', gTalent:'Talents', gCounter:'How to deal with it', gHow:'How to get', xenoSpireLocked:'Clear the Mothership Core first', xenoLose:'Stats alone will not win this. Open 📘 Handbook → Boss mechanics to read what it does.', caughtUp:'Back to your peak', catchupFx:'Title effects when re-passing old gates', on:'On', off:'Off', trans:'Transcend', transTitle:'✧ TRANSCENDENCE', transDesc:'Leave the cycle of rebirth forever. You keep EVERYTHING (stats, Essence, titles, Tower floor). From then on the aura you farm flows straight into Essence — no more climbing back from title 1.', transRate:'Your recent rebirth speed: {a} Essence/hour → after Transcending: {b} Essence/hour (×{m}), while farming (moving ×1, standing ×0.5).', transNeedR:'Rebirths: {c}/{v}', transNeedLog:'Measuring your rebirth speed: {c}/{v} rebirths since v2.2 (over ≥ {m} min)', transNeedX:'Defeat the Watcher in the Mothership Core', transNo:'Not yet — conditions:', transDo:'✧ Transcend', transSure:'This cannot be undone. Rebirth will be gone forever. Transcend?', transYes:'Yes, transcend', transDone:'You have transcended. Essence now flows with your aura.', transHud:'✧ +{x} Essence/h', transLocked:'Transcended — rebirth is gone', nmTier:'Nightmare {n}', nmDragonLocked:'All four must survive Nightmare {n} first', nmFirst:'Nightmare {n} survived! {r}', nmUnlockPas:'New talent: {n}', nmRankUp:'{n} → rank {r}', nmRankMax:'{n} is at max rank', nmSlot:'+1 talent slot!', talents:'Talents', talentSlots:'Slots {a}/{b}', talentHint:'Talents work in every fight (boss, tower, sanctum, PvP). Tap to equip / remove.', talentLocked:'Locked', talentRank:'Rank {r}/{m}', talentFull:'All slots are full — remove one first', src_sanct:'Nightmare Sanctum: survive Nightmare I of {n}', src_mirror:'Own 10 Mirror Shards', src_gear:'Equipment (coming soon)', nmSanct:'Nightmare Sanctum', nmTiers:'Nightmare tiers',
     towerFloor:'GodK Tower · Floor {n}', towerGuardian:'TOWER GUARDIAN', affixes:'This week', towerBest:'Tower: highest floor', towerNext:'Next floor {n}: {a}', weeklyReset:'Affixes change in {t}',
     bestiary:'Bestiary', bDiscovered:'Discovered {a} / {b}', bKills:'Defeated: {n}', bSeen:'Encountered', bWhere:'Found at', bLocked:'Not yet encountered',
     whereGate:'Dungeon Gate', whereTower:'GodK Tower', whereRift:'Rift Gate', whereRoam:'Wandering', whereMirror:'Mirror Gate', whereFinal:'Final Gate', whereSanct:'Four Symbols Sanctum',
@@ -394,7 +394,7 @@ const I18N = {
     wardrobe:'Tủ Đồ', tabAura:'Hào quang', tabNick:'Biệt hiệu', tabSkin:'Trang phục', equipped:'Đang dùng', equip:'Dùng', locked:'Chưa mở', unlockedNew:'Mở khóa: {n}!', nickname:'Biệt hiệu', skin:'Trang phục', auraStyle:'Hào quang',
     pvpCooldown:'Thách đấu đang hồi: {t}', pvpSeen:'{n} đã nhận được lời thách đấu…', pvpTimeout:'Không có phản hồi. Có thể thách đấu lại sau 1 phút.', pvpDeclinedCD:'Đối thủ từ chối. Có thể thách đấu lại sau 1 phút.', pvpBusy:'Đối thủ đang đánh boss — lời mời sẽ chờ.',
     gateSkip:'Cổng đã chinh phục — tự động vượt qua', speed:'Tốc độ',
-    trait:'Đặc tính', mechTransform:'Biến hình: còn nửa máu thì hồi {h}% máu, +{a}% công', awaken:'THỨC TỈNH', sanctum:'Tứ Tượng Thánh Địa', sanctLocked:'Đang phong ấn — đạt cảnh giới 4 để phá ấn', sanctEnter:'Khiêu chiến', sanctDragonLocked:'Hạ đủ Tứ Tượng trước', sanctFirst:'Lần đầu chinh phục! +{p}% mọi chỉ số vĩnh viễn', sanctAgain:'Lại chiến thắng! +{x} bá khí', threat:['Chết chắc','Rất khó','Khó','Vừa sức'], sanctCD:'Đang nghỉ ({t})', sanctCursedOn:'Chế độ Nguyền Rủa', sanctNormal:'Thường', sanctCursedLocked:'Lời nguyền thức tỉnh sau GODK và Hoàng Long', sanctBonus:'Phúc lành Thánh Địa', sanctPath:'Đường Thánh Địa',
+    trait:'Đặc tính', mechTransform:'Biến hình: còn nửa máu thì hồi {h}% máu, +{a}% công', awaken:'THỨC TỈNH', sanctum:'Tứ Tượng Thánh Địa', sanctLocked:'Đang phong ấn — đạt cảnh giới 4 để phá ấn', sanctEnter:'Khiêu chiến', sanctDragonLocked:'Hạ đủ Tứ Tượng trước', sanctFirst:'Lần đầu chinh phục! +{p}% mọi chỉ số vĩnh viễn', sanctAgain:'Lại chiến thắng! +{x} bá khí', threat:['Chết chắc','Rất khó','Khó','Vừa sức'], sanctCD:'Đang nghỉ ({t})', sanctCursedOn:'Chế độ Nguyền Rủa', sanctNormal:'Thường', sanctCursedLocked:'Lời nguyền thức tỉnh sau GODK và Hoàng Long', sanctBonus:'Phúc lành Thánh Địa', sanctPath:'Đường Thánh Địa', sanctNM:'Chế độ Ác Mộng', hellFloor:'Địa Ngục · Tầng {n}', bossTalents:'Thiên phú của boss', bossTalentsD:'Từ tầng 81 Tháp (Địa Ngục), boss mang thiên phú giống của ngươi (xem tab Thiên phú). Hạng tăng theo tầng. Hiện trên HUD trước khi vào.', deformed:'Dị Dạng', xeno:'Hư Tinh Đảo', xenoLocked:'Đạt GODK để đáp lại tín hiệu', xenoGate:'Cổng Hư Tinh', xenoChallenge:'Khiêu chiến', xenoOpen:'Cây cầu tới Hư Tinh Đảo đã hiện ra!', xenoBack:'⇄ Về Cổng Map 1', xenoGo:'🛸 Tới Hư Tinh Đảo', xenoLv:'Hư Tinh cấp {n}', xenoUp:'Hư Tinh cấp {n}! +1% bạo kích, +2% mọi chỉ số', xenoCrater:'Hố Tinh Thể ×3', xenoRes:'Cộng hưởng ×{n}', xenoCore:'Lõi Mẫu Hạm', xenoSpire:'Tháp Tín Hiệu', xenoNext:'Tiếp theo: {n}', xenoDone:'Đã chinh phục hết', xenoReward:'Thưởng: {r}', xenoSlot:'+1 ô thiên phú', xenoFirst:'Đã hạ {n}! {r}', xenoAgain:'Lại chiến thắng! +{x} bá khí', xenoBonus:'Thưởng Hư Tinh', immune:'MIỄN', guide:'Sổ Tay', gStats:'Chỉ số', gTraits:'Đặc tính boss', gMech:'Cơ chế boss', gTalent:'Thiên phú', gCounter:'Cách giải', gHow:'Cách nhận', xenoSpireLocked:'Chinh phục Lõi Mẫu Hạm trước', xenoLose:'Chỉ số thôi chưa đủ. Mở 📘 Sổ Tay → Cơ chế boss để xem nó làm gì.', caughtUp:'Trở lại đỉnh cao', catchupFx:'Hiệu ứng danh hiệu khi vượt lại cổng cũ', on:'Bật', off:'Tắt', trans:'Siêu Thoát', transTitle:'✧ SIÊU THOÁT', transDesc:'Rời khỏi vòng luân hồi mãi mãi. Ngươi giữ lại TẤT CẢ (chỉ số, Tinh hoa, danh hiệu, tầng Tháp). Từ đó bá khí ngươi farm sẽ chảy thẳng thành Tinh hoa — không phải leo lại từ danh hiệu 1 nữa.', transRate:'Tốc độ tái sinh gần đây của ngươi: {a} Tinh hoa/giờ → sau Siêu Thoát: {b} Tinh hoa/giờ (×{m}), khi đang farm (di chuyển ×1, đứng yên ×0.5).', transNeedR:'Số lần tái sinh: {c}/{v}', transNeedLog:'Đang đo tốc độ tái sinh: {c}/{v} lần tái sinh từ v2.2 (trong ≥ {m} phút)', transNeedX:'Hạ Kẻ Quan Sát ở Lõi Mẫu Hạm', transNo:'Chưa đủ điều kiện:', transDo:'✧ Siêu Thoát', transSure:'Không thể hoàn tác. Tái sinh sẽ biến mất vĩnh viễn. Siêu Thoát?', transYes:'Đồng ý Siêu Thoát', transDone:'Ngươi đã Siêu Thoát. Tinh hoa giờ chảy theo bá khí.', transHud:'✧ +{x} Tinh hoa/giờ', transLocked:'Đã Siêu Thoát — không còn tái sinh', nmTier:'Ác Mộng {n}', nmDragonLocked:'Cả 4 Tứ Tượng phải vượt Ác Mộng {n} trước', nmFirst:'Vượt qua Ác Mộng {n}! {r}', nmUnlockPas:'Thiên phú mới: {n}', nmRankUp:'{n} → hạng {r}', nmRankMax:'{n} đã đạt hạng tối đa', nmSlot:'+1 ô thiên phú!', talents:'Thiên Phú', talentSlots:'Ô {a}/{b}', talentHint:'Thiên phú có tác dụng ở mọi trận (cổng, tháp, thánh địa, PvP). Bấm để trang bị / gỡ.', talentLocked:'Chưa mở', talentRank:'Hạng {r}/{m}', talentFull:'Hết ô — gỡ bớt một thiên phú trước', src_sanct:'Thánh Địa Ác Mộng: vượt Ác Mộng I của {n}', src_mirror:'Sở hữu 10 Mảnh Gương', src_gear:'Trang bị (sắp ra mắt)', nmSanct:'Thánh Địa Ác Mộng', nmTiers:'Bậc Ác Mộng',
     towerFloor:'Tháp GodK · Tầng {n}', towerGuardian:'HỘ VỆ THÁP', affixes:'Tuần này', towerBest:'Tháp: tầng cao nhất', towerNext:'Tầng {n}: {a}', weeklyReset:'Đổi hiệu ứng sau {t}',
     bestiary:'Bách Khoa Boss', bDiscovered:'Đã gặp {a} / {b}', bKills:'Đã hạ: {n}', bSeen:'Đã chạm trán', bWhere:'Xuất hiện ở', bLocked:'Chưa gặp',
     whereGate:'Cổng Ngục', whereTower:'Tháp GodK', whereRift:'Cổng Hoang', whereRoam:'Tà Ảnh lang thang', whereMirror:'Cổng Gương', whereFinal:'Cổng Cuối', whereSanct:'Tứ Tượng Thánh Địa',
@@ -413,10 +413,10 @@ const REQ_TEXT = {
   free: { en:'Free', vi:'Miễn phí' }, best: { en:'Reach realm {c} (title #{v})', vi:'Đạt cảnh giới {c} (danh hiệu #{v})' }, R: { en:'Rebirth {v} times', vi:'Tái sinh {v} lần' },
   pvpW: { en:'Win {v} PvP duels', vi:'Thắng {v} trận PvP' }, bossWins: { en:'Defeat {v} Dungeon Gate bosses', vi:'Hạ {v} boss Cổng Ngục' }, riftWins: { en:'Conquer {v} Rift Gates', vi:'Chinh phục {v} Cổng Hoang' },
   roamWins: { en:'Banish {v} Wandering Horrors', vi:'Xua tan {v} Tà Ảnh' }, events: { en:'Enter {v} ×5 event gates', vi:'Vào {v} cổng sự kiện ×5' }, wells: { en:'Find {v} Aura Wells', vi:'Tìm {v} Giếng Bá Khí' },
-  stelae: { en:'Find {v} Ancient Stelae', vi:'Tìm {v} Bia Cổ' }, sanctN: { en:'Conquer the Four Symbols Sanctum', vi:'Chinh phục Tứ Tượng Thánh Địa' }, sanctC: { en:'Break the Sanctum curse', vi:'Phá lời nguyền Thánh Địa' }, finalWins: { en:'Defeat the Last Reflection', vi:'Đánh bại Bóng Gương Tối Hậu' }, mirrorWins: { en:'Defeat your Reflection {v} times', vi:'Đánh bại Bóng Gương {v} lần' }, marks: { en:'Own {v} Conquest Marks', vi:'Sở hữu {v} Ấn Chinh Phục' }, dist: { en:'Travel {v} distance', vi:'Di chuyển quãng đường {v}' },
+  stelae: { en:'Find {v} Ancient Stelae', vi:'Tìm {v} Bia Cổ' }, sanctN: { en:'Conquer the Four Symbols Sanctum', vi:'Chinh phục Tứ Tượng Thánh Địa' }, sanctC: { en:'Break the Sanctum curse', vi:'Phá lời nguyền Thánh Địa' }, nmAll: { en:'Survive Nightmare {v} on all Five Symbols', vi:'Vượt Ác Mộng bậc {v} ở cả 5 Tứ Tượng' }, trans: { en:'Transcend', vi:'Siêu Thoát' }, xs: { en:'Defeat the Nebula Sower on Xeno Isle', vi:'Hạ Kẻ Gieo Hạt Tinh Vân ở Hư Tinh Đảo' }, xl: { en:'Reach Xeno level {v}', vi:'Đạt Hư Tinh cấp {v}' }, finalWins: { en:'Defeat the Last Reflection', vi:'Đánh bại Bóng Gương Tối Hậu' }, mirrorWins: { en:'Defeat your Reflection {v} times', vi:'Đánh bại Bóng Gương {v} lần' }, marks: { en:'Own {v} Conquest Marks', vi:'Sở hữu {v} Ấn Chinh Phục' }, dist: { en:'Travel {v} distance', vi:'Di chuyển quãng đường {v}' },
 };
 function reqProgress(S, req){ const st = S.stats || {}; const [k, v] = req;
-  const cur = k === 'sanctN' ? SYMBOLS.filter(x => (S.sanct||{})[x.id]).length : k === 'sanctC' ? SYMBOLS.filter(x => (S.sanct||{})[x.id + '_c']).length : k === 'free' ? 1 : k === 'best' ? S.best : k === 'R' ? S.R : k === 'pvpW' ? S.pvpW : k === 'wells' ? (S.wells||[]).length : k === 'stelae' ? (S.stelae||[]).length : k === 'marks' ? (S.marks||0) : (st[k] || 0);
+  const cur = k === 'trans' ? (S.trans ? 1 : 0) : k === 'xs' ? (S.xs || 0) : k === 'xl' ? ((S.xeno || {}).lv || 0) : k === 'nmAll' ? Math.min(...SYMBOLS.map(x => (S.nm||{})[x.id] || 0)) : k === 'sanctN' ? SYMBOLS.filter(x => (S.sanct||{})[x.id]).length : k === 'sanctC' ? SYMBOLS.filter(x => (S.sanct||{})[x.id + '_c']).length : k === 'free' ? 1 : k === 'best' ? S.best : k === 'R' ? S.R : k === 'pvpW' ? S.pvpW : k === 'wells' ? (S.wells||[]).length : k === 'stelae' ? (S.stelae||[]).length : k === 'marks' ? (S.marks||0) : (st[k] || 0);
   return [cur, k === 'free' ? 1 : v]; }
 function reqMet(S, req){ const [c, v] = reqProgress(S, req); return c >= v; }
 function reqText(req, lang){ const [k, v] = req; return REQ_TEXT[k][lang].replace('{v}', k === 'dist' ? (v/1000) + 'K' : v).replace('{c}', k === 'best' ? (tierOf(v) + 1) : ''); }
@@ -440,6 +440,9 @@ const AURA_SKINS = [
   { id:'shattered',en:'Shattered Mirror',  vi:'Gương Vỡ Vô Lượng',    req:['finalWins',1],over:{ h:350, s:85, l:72, oh:195, os:90, glass:1, afterimage:1, lightning:1, halo:1, embers:2 } }, // v1.6 final-boss reward
   { id:'foursym',  en:'Four Symbols',      vi:'Tứ Tượng Hộ Thể',      req:['sanctN',5],   over:{ h:48, s:100, l:62, oh:165, os:100, foursym:1, embers:2, halo:1 } },
   { id:'cursedking',en:'Cursed Emperor',   vi:'Huyết Long Nguyền',    req:['sanctC',5],   over:{ h:285, s:90, l:45, oh:350, os:100, darkCore:1, foursym:2, lightning:1, embers:3 } },
+  { id:'nightmare',en:'Thousand Eyes',     vi:'Vạn Nhãn Ác Mộng',     req:['nmAll',3],    over:{ h:355, s:90, l:42, oh:340, os:100, darkCore:1, nmEyes:1, embers:2 } }, // v2.0 Nightmare Sanctum
+  { id:'xenoaura', en:'Xeno Signal',       vi:'Tín Hiệu Hư Tinh',     req:['xs',6],       over:{ h:180, s:100, l:60, oh:285, os:100, xenoRing:1, stars:1, sparks:1 } }, // v2.1 Xeno Isle
+  { id:'transcend',en:'Transcendence',     vi:'Siêu Thoát',           req:['trans',1],    over:{ h:48, s:60, l:88, oh:200, os:90, halo:1, rays:1, stars:1, wisps:1, rings:1 } }, // v2.2
   { id:'prism',    en:'Prism Unlimited',   vi:'Vô Lượng Lăng Kính',   req:['best',OT(200)],   over:{ h:0, s:100, l:65, oh:0, os:100, rainbow:1, rays:1, halo:1, stars:1 } },
 ];
 // Nicknames (secondary titles shown above your name)
@@ -467,6 +470,11 @@ const NICKS = [
   { id:'godk',        en:'GodK',                vi:'GodK',                  req:['best',MAX_TITLE] },
   { id:'dragonslayer',en:'Dragon Emperor\'s Bane', vi:'Kẻ Hạ Hoàng Long',  req:['sanctN',5] },
   { id:'cursebreaker',en:'Curse Breaker',        vi:'Kẻ Phá Lời Nguyền',  req:['sanctC',5] },
+  { id:'transcended', en:'The Transcended',   vi:'Kẻ Siêu Thoát',     req:['trans',1] },
+  { id:'visitor',    en:'Visitor from the Void', vi:'Kẻ Đến Từ Hư Tinh', req:['xs',6] },
+  { id:'resonant',   en:'Resonant',            vi:'Cộng Hưởng',        req:['xl',50] },
+  { id:'nmsurvivor', en:'Nightmare Survivor',   vi:'Kẻ Sống Sót Ác Mộng', req:['nmAll',1] },
+  { id:'nmlord',     en:'Lord of Nightmares',   vi:'Chúa Tể Ác Mộng',    req:['nmAll',5] },
   { id:'mirrorbreaker',en:'Mirror Breaker',     vi:'Kẻ Vượt Gương',         req:['finalWins',1] },
   { id:'self',        en:'Self-Conqueror',      vi:'Kẻ Vượt Qua Chính Mình', req:['mirrorWins',1] },
   { id:'mirrormaster',en:'Master of Mirrors',   vi:'Chủ Nhân Của Gương',    req:['mirrorWins',5] },
@@ -509,13 +517,14 @@ const TOWER_GUARDIANS = [
 ];
 // floors 70 and 80: the cursed archangels (defined below) join the guardian rotation
 function towerBoss(fl){
+  if (fl >= TOWER_NEW_FROM && fl <= HELL_TO) return hellBoss(fl); // v2.3 floors 81–100: Hell
   if (fl % 10 === 0) return TOWER_GUARDIANS[(fl/10 - 1) % TOWER_GUARDIANS.length];
   const pool = HIGH_BOSSES.concat(UNLIMITED_BOSSES, [BOSSES[9], BOSSES[10]], EXTRA_BOSSES.filter(b => ['demoncult','bloodsword','reaper','bonedragon','hydra','sphinx','oni','tiangou'].includes(b.id)));
   let h = (fl*2654435761) >>> 0; return pool[h % pool.length];
 }
 const towerCycle = fl => Math.floor((fl - 1)/(TOWER_GUARDIANS.length*10)); // guardians return stronger each full cycle
 const towerForm = fl => [9, 10, 11, 12][Math.min(3, Math.floor((fl - 1)/15))];
-function towerBossName(B, fl, lang){ const n = lang === 'vi' ? B.vi : B.en; const c = towerCycle(fl); return c > 0 ? `${n} ${roman(c + 1)}` : n; }
+function towerBossName(B, fl, lang){ const n = lang === 'vi' ? B.vi : B.en; if (B.hell) return n; const c = towerCycle(fl); return c > 0 ? `${n} ${roman(c + 1)}` : n; }
 
 // Weekly affixes — same for every player (week index from the shared clock)
 const AFFIXES = [
@@ -540,7 +549,7 @@ function towerAffixes(fl, now){
 }
 
 // Bestiary: every boss in the game (new arrays added later appear automatically)
-const bestiaryList = () => BOSSES.concat(EXTRA_BOSSES, typeof TRAIT_BOSSES !== 'undefined' ? TRAIT_BOSSES.concat(ARCHANGELS) : [], UNLIMITED_BOSSES, HIGH_BOSSES, [MIRROR_BOSS, FINAL_MIRROR], TOWER_GUARDIANS, typeof SYMBOLS !== 'undefined' ? SYMBOLS.concat(SYMBOLS.map(x => symbolBoss(x, 1))) : []);
+const bestiaryList = () => BOSSES.concat(EXTRA_BOSSES, typeof TRAIT_BOSSES !== 'undefined' ? TRAIT_BOSSES.concat(ARCHANGELS) : [], UNLIMITED_BOSSES, HIGH_BOSSES, [MIRROR_BOSS, FINAL_MIRROR], TOWER_GUARDIANS, typeof SYMBOLS !== 'undefined' ? SYMBOLS.concat(SYMBOLS.map(x => symbolBoss(x, 1)), typeof NM_BOSSES !== 'undefined' ? NM_BOSSES : [], typeof XENO_BOSSES !== 'undefined' ? XENO_BOSSES : [], typeof HELL_ALL !== 'undefined' ? HELL_ALL : []) : []);
 
 
 // ===================== v1.9 boss TRAITS =====================
@@ -593,7 +602,7 @@ const sanctCursedOpen = S => S.best >= MAX_TITLE && !!(S.sanct || {}).yellowdrag
 // v1.11 FOUNDATION — equipment & player passives. DATA + PLUMBING ONLY: both features are OFF.
 // Nothing here changes the game while FEATURE_GEAR / FEATURE_PASSIVES are false. See GHI-CHU (v1.12).
 // ======================================================================================================
-const FEATURE_GEAR = false, FEATURE_PASSIVES = false;
+const FEATURE_GEAR = false, FEATURE_PASSIVES = true; // v2.0: passives ON (gear still off)
 const GEAR_SLOTS = ['weapon', 'armor', 'charm'];
 const GEAR_RARITY = [ // stat budget multiplier per rarity (for future drops)
   { id:'common',    en:'Common',    vi:'Thường',     col:'#c8c8c8', m:1.0 },
@@ -615,25 +624,185 @@ function gearMult(S){
 // Player passives ("Thiên Phú"). Same idea as boss AFFIXES but as hooks, so either side of a fight can carry them.
 // Hooks (all optional), c = { f: fight, me: side, foe: side }:
 //   onDeal(c, d) → new outgoing damage · onTake(c, d) → new incoming damage · onTurn(c) · onDeath(c) → true = survive
-const PASSIVE_SLOTS = 3;
+// v2.0: passives are ON. Ranks come from the Nightmare Sanctum (rank = highest Nightmare tier survived on that symbol, max 10).
+const PASSIVE_RANK_MAX = 10;
+const prk = (c, id) => Math.max(1, Math.min(PASSIVE_RANK_MAX, (c.me.prank && c.me.prank[id]) || 1));
 const PASSIVES = {
-  lifesteal: { ico:'🐉', en:'Azure Dragon\'s Thirst', vi:'Thanh Long Hút Huyết', src:'sanct:azure',
-    d:{ en:'Heal 5% of damage dealt', vi:'Hồi 5% sát thương gây ra' },
-    onDeal: (c, d) => { c.me.hp = Math.min(c.me.st.hp, c.me.hp + d*0.05); return d; } },
-  tigerfang:  { ico:'🐯', en:'White Tiger\'s Fang', vi:'Bạch Hổ Nanh Vuốt', src:'sanct:tiger',
-    d:{ en:'Every 4th hit deals ×2', vi:'Mỗi đòn thứ 4 gây ×2' },
-    onDeal: (c, d) => (c.f.round % 4 === 0 ? d*2 : d) },
-  rebirth:    { ico:'🔥', en:'Vermilion Rebirth', vi:'Chu Tước Niết Bàn', src:'sanct:phoenix',
-    d:{ en:'Once per fight, survive a lethal blow with 30% HP', vi:'Mỗi trận 1 lần: sống lại với 30% máu' },
-    onDeath: c => { if (c.me.fx.reborn) return false; c.me.fx.reborn = 1; c.me.hp = c.me.st.hp*0.3; return true; } },
-  shell:      { ico:'🐢', en:'Black Tortoise Shell', vi:'Huyền Vũ Giáp', src:'sanct:tortoise',
-    d:{ en:'Take 20% less damage above half HP', vi:'Nhận ít hơn 20% sát thương khi trên nửa máu' },
-    onTake: (c, d) => (c.me.hp > c.me.st.hp*0.5 ? d*0.8 : d) },
+  lifesteal: { ico:'🐉', en:'Corpse Dragon\'s Thirst', vi:'Long Thi Hút Huyết', src:'sanct:azure',
+    d:{ en:'Heal {v}% of damage dealt', vi:'Hồi {v}% sát thương gây ra' }, val: r => 5 + (r - 1),
+    onDeal: (c, d) => { if (!(c.foe.pas || []).includes('purify')) c.me.hp = Math.min(c.me.st.hp, c.me.hp + d*(5 + prk(c, 'lifesteal') - 1)/100); return d; } },
+  tigerfang:  { ico:'🐯', en:'Faceless Fang', vi:'Nanh Vô Diện', src:'sanct:tiger',
+    d:{ en:'Every 4th hit deals ×{v}', vi:'Mỗi đòn thứ 4 gây ×{v}' }, val: r => (2 + 0.1*(r - 1)).toFixed(1),
+    onDeal: (c, d) => (c.f.round % 4 === 0 ? d*(2 + 0.1*(prk(c, 'tigerfang') - 1)) : d) },
+  rebirth:    { ico:'🔥', en:'Ashen Rebirth', vi:'Tro Tàn Niết Bàn', src:'sanct:phoenix',
+    d:{ en:'Once per fight, survive a lethal blow with {v}% HP', vi:'Mỗi trận 1 lần: sống lại với {v}% máu' }, val: r => 30 + 3*(r - 1),
+    onDeath: c => { if (c.me.fx.reborn) return false; c.me.fx.reborn = 1; c.me.hp = c.me.st.hp*(30 + 3*(prk(c, 'rebirth') - 1))/100; return true; } },
+  shell:      { ico:'🐢', en:'Grave Shell', vi:'Mai Mộ Phần', src:'sanct:tortoise',
+    d:{ en:'Take {v}% less damage above half HP', vi:'Nhận ít hơn {v}% sát thương khi trên nửa máu' }, val: r => (20 + 1.5*(r - 1)).toFixed(1).replace('.0', ''),
+    onTake: (c, d) => (c.me.hp > c.me.st.hp*0.5 ? d*(1 - (20 + 1.5*(prk(c, 'shell') - 1))/100) : d) },
+  eyes:       { ico:'👁', en:'Thousand-Eyed Sight', vi:'Vạn Nhãn Khóa Mục', src:'sanct:yellowdragon',
+    d:{ en:'Your critical hits deal ×{v} instead of ×2.5', vi:'Đòn bạo kích của ngươi gây ×{v} thay vì ×2.5' }, val: r => (3 + 0.1*(r - 1)).toFixed(1),
+    onDeal: (c, d) => (c.crit ? d*(3 + 0.1*(prk(c, 'eyes') - 1))/2.5 : d) },
   reflect:    { ico:'🪞', en:'Mirror Reflection', vi:'Phản Chiếu', src:'mirror',
-    d:{ en:'Reflect 1% of damage taken per Mirror Shard', vi:'Phản 1% sát thương nhận mỗi Mảnh Gương' },
+    d:{ en:'Reflect {v}% of damage taken', vi:'Phản {v}% sát thương nhận' }, val: () => 10,
     onTake: (c, d) => { c.foe.hp -= d*0.01*(c.me.shards || 0); return d; } },
-  pierce:     { ico:'🗡', en:'Armor Pierce', vi:'Xuyên Giáp', src:'gear',
-    d:{ en:'Ignore 30% of enemy Resolve', vi:'Bỏ qua 30% Ý chí đối thủ' },
+  purify:     { ico:'🧪', en:'Purify', vi:'Tịnh Hóa', src:'xeno:1',
+    d:{ en:'Enemies cannot heal (Regeneration, Lifesteal, Absorb, transformation heal)', vi:'Kẻ địch không thể hồi máu (Hồi Sinh, Hút Máu, Hấp Thụ, hồi máu khi biến hình)' }, val: () => '' },
+  multi:      { ico:'👥', en:'Twin Shadow', vi:'Song Ảnh', src:'xeno:2',
+    d:{ en:'Every turn, a shadow strikes once more for 50% damage (a separate hit)', vi:'Mỗi lượt một bóng ảnh đánh thêm 1 đòn 50% sát thương (tính là đòn riêng)' }, val: () => '' },
+  pierce:     { ico:'🗡', en:'Armor Pierce', vi:'Xuyên Giáp', src:'xeno:4',
+    d:{ en:'Ignore 30% of enemy Resolve', vi:'Bỏ qua 30% Ý chí đối thủ' }, val: () => 30,
     onDeal: (c, d) => d*(1 + 0.3*c.foe.st.def/(c.me.st.atk + c.foe.st.def)) }, // approx of a²/(a+0.7d)
 };
-const activePassives = S => FEATURE_PASSIVES ? (S.passives || []).filter(id => PASSIVES[id]).slice(0, PASSIVE_SLOTS) : [];
+const passiveSlots = S => 2 + (((S.nm || {}).yellowdragon || 0) >= 1 ? 1 : 0) + ((S.xs || 0) >= 4 ? 1 : 0); // 3rd slot: survive Nightmare I of the Yellow Dragon
+function passiveRank(S, id){ const P = PASSIVES[id]; if (!P) return 0; const [k, a] = P.src.split(':');
+  if (k === 'xeno') return (S.xs || 0) > +a ? 1 : 0;
+  if (k === 'sanct') return Math.min(PASSIVE_RANK_MAX, (S.nm || {})[a] || 0); if (k === 'mirror') return (S.shards || 0) >= MAX_SHARDS ? 1 : 0; return 0; }
+const passiveRanks = S => { const o = {}; for (const id in PASSIVES) { const r = passiveRank(S, id); if (r) o[id] = r; } return o; };
+const activePassives = S => FEATURE_PASSIVES ? (S.passives || []).filter(id => PASSIVES[id] && passiveRank(S, id) > 0).slice(0, passiveSlots(S)) : [];
+
+// ======================================================================================================
+// v2.0 NIGHTMARE SANCTUM — opens after all five cursed Symbols. Endless tiers per symbol; new horror bosses.
+// Tier k strength = gate-boss equivalent NM_REF + NM_STEP·(k−1). Calibrated (tools/sim/nm2.py): casual ~50h / spam ~30h for tier I.
+// ======================================================================================================
+const NM_REF = [378, 390], NM_STEP = 8;
+const NM_BOSSES = [
+  { id:'nm_azure', base:'azure', nm:1, trait:'hp', aff:['leech','regen','void'], hue: 110, en:'The Corpse Dragon', vi:'Long Thi',
+    intro:{ en:['The spring wind smells of rot.','It sheds its flesh like old scales — and keeps coming.'], vi:['Gió xuân bốc mùi tử khí.','Nó lột thịt như lột vảy cũ — và vẫn bò tới.'] } },
+  { id:'nm_tiger', base:'tiger', nm:1, trait:'atk', aff:['twin','enrage','void'], hue: 0, en:'The Faceless Tiger', vi:'Hổ Vô Diện',
+    intro:{ en:['It has no eyes. It has no face.','It has a mouth. A human one.'], vi:['Nó không có mắt. Không có mặt.','Nó chỉ có một cái miệng. Miệng người.'] } },
+  { id:'nm_phoenix', base:'phoenix', nm:1, trait:null, aff:['regen','crit','giant','void'], hue: 25, en:'The Ashen Bird', vi:'Chu Tước Tro Tàn',
+    intro:{ en:['Its feathers burned away long ago.','The candles on its wings are still lit.'], vi:['Lông của nó đã cháy rụi từ lâu.','Những ngọn nến trên cánh nó vẫn còn cháy.'] } },
+  { id:'nm_tortoise', base:'tortoise', nm:1, trait:'def', aff:['shield','thorns','void'], hue: 160, en:'The Grave Tortoise', vi:'Huyền Vũ Mộ Phần',
+    intro:{ en:['Its shell is a graveyard.','Something under the stones is still knocking.'], vi:['Mai của nó là một nghĩa địa.','Có thứ gì dưới những tấm bia vẫn đang gõ cửa.'] } },
+  { id:'nm_yellowdragon', base:'yellowdragon', center:1, nm:1, trait:'hp', aff:['enrage','armor','crit','void'], hue: 50, en:'The Thousand-Eyed Dragon', vi:'Hoàng Long Vạn Nhãn',
+    intro:{ en:['Every scale is an eye.','Every eye has already seen how you die.'], vi:['Mỗi chiếc vảy là một con mắt.','Con mắt nào cũng đã thấy ngươi chết thế nào.'] } },
+];
+const nmBoss = sym => Object.assign({}, NM_BOSSES.find(b => b.base === sym.id), { dx: sym.dx, dy: sym.dy });
+const nmOpen = S => SYMBOLS.every(x => (S.sanct || {})[x.id + '_c']);
+const nmTier = (S, id) => (S.nm || {})[id] || 0;
+const nmRef = (k, center) => NM_REF[center ? 1 : 0] + NM_STEP*(k - 1);
+const ROMAN = n => { const v = [[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']]; let o = ''; for (const [a, b] of v) while (n >= a) { o += b; n -= a; } return o; };
+
+
+// ======================================================================================================
+// v2.1 HƯ TINH ĐẢO (Xeno Isle) — Map 2. North of the square map. Opens at GODK after beating the Gatekeeper.
+// Bosses are PASSIVE CHECKS: their mechanics cannot be beaten by raw stats alone (tools/sim/xsim.py + xcal.py).
+// ======================================================================================================
+const XENO = { x: 1200, y: -9400, gate: [1200, -3860], road: 150, crater: 260 };
+const XENO_SPOTS = { core: [0, 0], spire: [0, -1520], pad: [0, 1380], craters: [[-1200, 0], [1200, 0]] }; // relative to XENO
+function xenoOn(x, y){ // island = union of shapes (cross like the reference picture)
+  const dx = x - XENO.x, dy = y - XENO.y;
+  if (Math.hypot(dx, dy) <= 720) return true;
+  if (dx >= -520 && dx <= 520 && dy >= 500 && dy <= 1650) return true;            // south stem + landing pad
+  if (dx >= -460 && dx <= 460 && dy >= -1750 && dy <= -500) return true;          // north stem + spire
+  for (const k of [-1, 1]) { const ex = (dx - k*1150)/720, ey = dy/500; if (ex*ex + ey*ey <= 1) return true; } // west / east lobes
+  return false;
+}
+const xenoInCrater = (x, y) => XENO_SPOTS.craters.some(([a, b]) => Math.hypot(x - XENO.x - a, y - XENO.y - b) < XENO.crater);
+const XENO_NEED = l => 300*Math.pow(1.08, l);         // Hư Tinh points for the next level (≈ lv 25 after 1h in a crater, lv 50 after 8h)
+const XENO_RATE = { base: 1, moving: 2, crater: 3, resPer: 0.25, resMax: 3 };
+const xenoMult = S => 1 + 0.02*((S.xeno || {}).lv || 0);  // +2% all stats per level
+const xenoCrit = S => 0.01*((S.xeno || {}).lv || 0);      // +1% crit per level (total crit capped at 95%)
+const XENO_CD_WIN = 10*60*1000, XENO_CD_LOSE = 90*1000;
+// Map-2 boss mechanics (not in the weekly Tower rotation)
+const XAFFIXES = [
+  { id:'quantum', en:'Quantum Shield', vi:'Lá Chắn Lượng Tử', ico:'🔷', d:{ en:'Only takes damage from CRITICAL hits', vi:'Chỉ nhận sát thương từ đòn BẠO KÍCH' } },
+  { id:'absorb',  en:'Absorb',         vi:'Hấp Thụ',          ico:'🌀', d:{ en:'Heals 30% of the damage it takes', vi:'Hồi 30% sát thương nó nhận vào' } },
+  { id:'dmgcap',  en:'Damage Cap',     vi:'Giới Hạn Sát Thương', ico:'🧱', d:{ en:'No single hit can deal more than 3% of its max HP', vi:'Mỗi đòn gây tối đa 3% máu tối đa của nó' } },
+  { id:'reflect', en:'Reflector',      vi:'Phản Xạ',          ico:'🔁', d:{ en:'Reflects 50% of NON-critical damage back at you', vi:'Phản lại ngươi 50% sát thương KHÔNG bạo kích' } },
+  { id:'mimic',   en:'Assimilate',     vi:'Đồng Hóa',         ico:'🧬', d:{ en:'Copies your FIRST equipped talent and uses it against you', vi:'Sao chép thiên phú ĐẦU TIÊN ngươi trang bị và dùng nó chống lại ngươi' } },
+  { id:'phases',  en:'Shifting Phases', vi:'Đổi Pha',         ico:'♻', d:{ en:'Every 25% HP lost: Quantum Shield → Absorb → Damage Cap → Reflector', vi:'Mỗi 25% máu mất đi: Lá Chắn Lượng Tử → Hấp Thụ → Giới Hạn Sát Thương → Phản Xạ' } },
+];
+const XPHASES = ['quantum', 'absorb', 'dmgcap', 'reflect'];
+const XENO_BOSSES = [ // index = order in the chain (S.xs = how many cleared)
+  { id:'xg_tripod',  ref:302, trait:'def', aff:['quantum'],            hue: 190, at:'gate',  en:'The Disc Warden', vi:'Kẻ Gác Đĩa', reward:'open',
+    intro:{ en:['Three legs. One red eye.','It only answers to precision.'], vi:['Ba chân. Một mắt đỏ.','Nó chỉ chịu thua trước sự chính xác.'] } },
+  { id:'x_watcher',  ref:314, trait:null,  aff:['mimic','regen'],      hue: 150, at:'core',  en:'The Watcher', vi:'Kẻ Quan Sát', reward:'purify',
+    intro:{ en:['It has been watching you since the bridge.','Now it knows what you are made of.'], vi:['Nó đã theo dõi ngươi từ lúc qua cầu.','Giờ nó biết ngươi được làm từ gì.'] } },
+  { id:'x_parasite', ref:320, trait:'hp',  aff:['absorb','leech'],     hue: 300, at:'core',  en:'The Void Parasite', vi:'Ký Sinh Hư Không', reward:'multi',
+    intro:{ en:['Every wound you give it becomes food.','Starve it.'], vi:['Mỗi vết thương ngươi gây ra đều thành thức ăn.','Hãy bỏ đói nó.'] } },
+  { id:'x_hive',     ref:318, trait:null,  aff:['dmgcap','twin'],      hue: 60,  at:'core',  en:'The Hive Mother', vi:'Mẫu Thể Tổ Ong', reward:'slot',
+    intro:{ en:['One blow will never be enough.','A thousand drones hum in agreement.'], vi:['Một đòn sẽ không bao giờ đủ.','Nghìn con drone vo ve đồng tình.'] } },
+  { id:'x_mimicry',  ref:326, trait:'def', aff:['reflect','armor'],    hue: 210, at:'core',  en:'The Assimilation Engine', vi:'Cỗ Máy Đồng Hóa', reward:'pierce',
+    intro:{ en:['Liquid metal. A perfect mirror for brute force.','Only precision gets through.'], vi:['Kim loại lỏng. Tấm gương hoàn hảo cho sức mạnh thô bạo.','Chỉ sự chính xác mới xuyên qua được.'] } },
+  { id:'x_sower',    ref:332, trait:null,  aff:['phases','enrage'],    hue: 270, at:'spire', en:'The Nebula Sower', vi:'Kẻ Gieo Hạt Tinh Vân', reward:'aura',
+    intro:{ en:['It planted the stars you were born under.','It came back for the harvest.'], vi:['Nó đã gieo những vì sao ngươi sinh ra dưới đó.','Giờ nó quay lại để gặt.'] } },
+];
+
+// ======================================================================================================
+// v2.1 HANDBOOK (Sổ Tay) — explains every stat, trait, mechanic and talent, with a hint on how to deal with it.
+// ======================================================================================================
+const GUIDE_STATS = [
+  { ico:'❤', k:'hp',  d:{ en:'Your health in auto-battles. At 0 you lose.', vi:'Máu của ngươi trong trận tự động. Về 0 là thua.' } },
+  { ico:'🔥', k:'atk', d:{ en:'Damage per hit. Damage = Power² / (Power + enemy Resolve).', vi:'Sát thương mỗi đòn. Sát thương = Bá lực² / (Bá lực + Ý chí đối thủ).' } },
+  { ico:'🛡', k:'def', d:{ en:'Reduces damage you take (same formula, from the enemy side).', vi:'Giảm sát thương ngươi nhận (cùng công thức, từ phía đối thủ).' } },
+  { ico:'✴', k:'crit', d:{ en:'Chance to land a critical hit (×2.5 damage). Base 10%, +Essence up to 25%, + Xeno levels (max 95%). Key for Quantum Shield and Reflector.', vi:'Tỉ lệ bạo kích (×2.5 sát thương). Gốc 10%, Tinh hoa thêm tới 25%, + cấp Hư Tinh (tối đa 95%). Then chốt khi gặp Lá Chắn Lượng Tử và Phản Xạ.' } },
+  { ico:'💠', k:'essence', d:{ en:'Earned by rebirthing. Each point = +3.5% all stats, forever.', vi:'Nhận khi tái sinh. Mỗi điểm = +3.5% mọi chỉ số, vĩnh viễn.' } },
+  { ico:'⛩', k:'marks', d:{ en:'Conquest Marks from Wild Gates: +0.5% stats and +1% aura gain each (max 60).', vi:'Ấn Chinh Phục từ Cổng Hoang: mỗi ấn +0.5% chỉ số và +1% bá khí (tối đa 60).' } },
+  { ico:'🪞', k:'shards', d:{ en:'Mirror Shards from the Mirror Gate: +6% all stats each (max 10). 10 shards unlock the Reflection talent.', vi:'Mảnh Gương từ Cổng Gương: mỗi mảnh +6% mọi chỉ số (tối đa 10). Đủ 10 mảnh mở thiên phú Phản Chiếu.' } },
+  { ico:'⛩', k:'sanctBonus', d:{ en:'Permanent bonus from first clears in the Four Symbols Sanctum.', vi:'Thưởng vĩnh viễn khi lần đầu hạ boss ở Tứ Tượng Thánh Địa.' } },
+  { ico:'✧', k:'trans', d:{ en:'Transcendence (Xeno Isle core, needs 200 rebirths): one-time choice. Rebirth disappears; everything is kept; farming aura gives Essence directly at 125% of your own recent rebirth speed.', vi:'Siêu Thoát (Lõi Mẫu Hạm, cần 200 lần tái sinh): lựa chọn một lần. Mất tái sinh; giữ nguyên mọi thứ; farm bá khí nhận thẳng Tinh hoa với 125% tốc độ tái sinh gần đây của chính ngươi.' } },
+  { ico:'🛸', k:'xenoBonus', d:{ en:'Xeno level: farm aura on Xeno Isle (×3 in crystal craters, faster near other players). Each level +1% crit and +2% all stats.', vi:'Cấp Hư Tinh: farm bá khí trên Hư Tinh Đảo (×3 trong Hố Tinh Thể, nhanh hơn khi đứng gần người khác). Mỗi cấp +1% bạo kích và +2% mọi chỉ số.' } },
+];
+// v2.2: no 'how to counter' text in the Handbook — it only explains what each thing is (player request).
+
+
+// ======================================================================================================
+// v2.2 SIÊU THOÁT (Transcendence) — simple version, no skill tree.
+// One-time, at the Mothership Core. Keeps everything. Rebirth is gone; aura farming adds Essence directly at
+// TRANS.mult × the player's OWN recent rebirth Essence rate (measured from S.eLog), so it is always faster than
+// continuing to rebirth and never lowers anything.
+// ======================================================================================================
+const TRANS = { minR: 200, needXs: 2, mult: 1.25, logMin: 10, spanMin: 20, windowSec: 3*3600, stand: 0.5 };
+function transRecentRate(S){ // Essence per hour from the rebirth log (last 3h of play)
+  const L = (S.eLog || []).filter(e => e[0] >= S.playSec - TRANS.windowSec); if (L.length < 2) return 0;
+  const [t0, e0] = L[0], [t1, e1] = L[L.length - 1]; return t1 > t0 ? (e1 - e0)/(t1 - t0)*3600 : 0; }
+function transCheck(S){ const L = (S.eLog || []).filter(e => e[0] >= S.playSec - TRANS.windowSec), span = L.length > 1 ? (L[L.length - 1][0] - L[0][0])/60 : 0;
+  return { r: (S.R || 0) >= TRANS.minR, x: (S.xs || 0) >= TRANS.needXs, log: L.length >= TRANS.logMin && span >= TRANS.spanMin, logN: L.length, span }; }
+
+
+// ======================================================================================================
+// v2.3 GODK TOWER — HELL (floors 81–100). Floors 1–80 are UNCHANGED.
+// From floor 81 bosses carry TALENTS (same hooks as the player's) and are ×TOWER_HELL_M stronger.
+// Calibrated (tools/sim/tsim.py + tcal2.py): a player with Xeno levels + their best 3–4 talents reaches each
+// floor at the SAME play time as the old tower (no talents, no Xeno): floor 81 ≈ 50h, 90 ≈ 66h, 100 ≈ 75h (casual).
+// Without talents those floors are ~0% → hard-stuck → farm talents (Nightmare / Xeno Isle) → come back.
+// ======================================================================================================
+const TOWER_NEW_FROM = 81, HELL_TO = 100, TOWER_HELL_M = 2.9, DEFORMED_EVERY = 4;
+const HELL_BOSSES = [
+  { id:'h_oxhead',    hell:1, hue: 15,  pas:['shell','tigerfang'], en:'Ox-Head', vi:'Ngưu Đầu',
+    intro:{ en:['Iron hooves on the bridge of the dead.','It drags the souls who are late.'], vi:['Móng sắt nện trên cầu Nại Hà.','Nó lôi đi những linh hồn đến trễ.'] } },
+  { id:'h_horseface', hell:1, hue: 30,  pas:['multi','lifesteal'], en:'Horse-Face', vi:'Mã Diện',
+    intro:{ en:['A long face. A longer spear.','It never misses a name on the list.'], vi:['Mặt dài. Ngọn giáo còn dài hơn.','Nó chưa từng bỏ sót một cái tên trong sổ.'] } },
+  { id:'h_mengpo',    hell:1, hue: 140, pas:['purify','rebirth'],  en:'Lady Meng', vi:'Mạnh Bà',
+    intro:{ en:['"Drink, child. You will not need to remember."','The soup is still warm.'], vi:['"Uống đi con. Con sẽ không cần nhớ gì nữa."','Bát canh vẫn còn ấm.'] } },
+  { id:'h_hungry',    hell:1, hue: 90,  pas:['lifesteal','rebirth'], en:'Hungry Ghost', vi:'Quỷ Đói',
+    intro:{ en:['A mouth as small as a needle.','A hunger as wide as the sea.'], vi:['Cái miệng nhỏ như lỗ kim.','Cơn đói rộng như biển cả.'] } },
+  { id:'h_yaksha',    hell:1, hue: 200, pas:['tigerfang','pierce'], en:'Yaksha', vi:'Dạ Xoa',
+    intro:{ en:['Blue skin. Fangs like daggers.','It guards the gate you are trying to break.'], vi:['Da xanh. Nanh như dao găm.','Nó canh chính cánh cổng ngươi đang muốn phá.'] } },
+];
+const HELL_GUARDS = {
+  90:  { id:'h_judge', hell:1, hue: 0,  pas:['shell','rebirth','purify'], en:'The Infernal Judge', vi:'Phán Quan',
+    intro:{ en:['The Ledger of Life and Death lies open.','Your name is already written. In red.'], vi:['Sổ Sinh Tử đã mở sẵn.','Tên ngươi đã được viết. Bằng mực đỏ.'] } },
+  100: { id:'h_yama',  hell:1, hue: 350, pas:['rebirth','multi','shell','purify'], en:'King Yama', vi:'Diêm La Vương',
+    intro:{ en:['The Ten Courts fall silent.','The King of Hell rises from his throne — for you.'], vi:['Thập Điện im phăng phắc.','Diêm La Vương đứng dậy khỏi ngai — vì ngươi.'] } },
+};
+const DEFORMED_EXTRA = ['multi', 'shell', 'rebirth', 'lifesteal', 'tigerfang'];
+const hellDeformed = B => Object.assign({}, B, { id: B.id + '_d', base: B.id, deformed: 1, en: B.en + ' · Deformed', vi: B.vi + ' · Dị Dạng',
+  pas: B.pas.concat([DEFORMED_EXTRA.find(x => !B.pas.includes(x))]),
+  intro: { en: ['It came back wrong.', B.intro.en[1]], vi: ['Nó quay về… sai hình dạng.', B.intro.vi[1]] } });
+const HELL_ALL = HELL_BOSSES.concat(HELL_BOSSES.map(hellDeformed), [HELL_GUARDS[90], HELL_GUARDS[100]]);
+function hellBoss(fl){
+  if (HELL_GUARDS[fl]) return HELL_GUARDS[fl];
+  const h = ((fl*2654435761) >>> 0), B = HELL_BOSSES[h % HELL_BOSSES.length];
+  return (h >>> 8) % DEFORMED_EVERY === 0 ? hellDeformed(B) : B;
+}
+const TOWER_PAS_POOL = ['shell', 'rebirth', 'multi', 'lifesteal', 'tigerfang', 'purify', 'pierce'];
+function towerBossPas(fl, B){ // talents a Tower boss carries (none below floor 81)
+  if (fl < TOWER_NEW_FROM) return null;
+  const rank = Math.min(PASSIVE_RANK_MAX, 1 + Math.floor((fl - TOWER_NEW_FROM)/2));
+  let pas = B.pas ? B.pas.slice() : null;
+  if (!pas) { let h = (fl*40503) >>> 0; const ids = TOWER_PAS_POOL.slice(); pas = []; for (let i = 0; i < (fl % 10 === 0 ? 3 : 2); i++) { h = (h*1103515245 + 12345) >>> 0; pas.push(ids.splice(h % ids.length, 1)[0]); } } // floors > 100
+  const prank = {}; pas.forEach(id => prank[id] = rank); return { pas, prank, rank };
+}

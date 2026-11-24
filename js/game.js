@@ -10,7 +10,7 @@
 
   // ---------------- Save ----------------
   const uid = () => 'p' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
-  const DEF = () => ({ v: 1, id: uid(), name: '', lang: (navigator.language||'').startsWith('vi') ? 'vi' : 'en', L: 1, xp: 0, t: 1, R: 0, E: 0, best: 1, stelae: [], wells: [], pvpW: 0, muted: false, vol: { m: 0.5, s: 0.8, a: 0.5 }, roamCD: {}, stats: {}, as: 'realm', sk: 'classic', nk: 'none', unlocks: [], pvpCD: 0, playSec: 0, marks: 0, riftCD: {}, riftSeen: [], buffUntil: 0, buffEv: -1, tv: 2, shards: 0, mirrorCD: 0, bestiary: {}, sanct: {}, sanctCD: {}, sanctMode: 'normal', gear: { slots: { weapon: null, armor: null, charm: null }, inv: [] }, passives: [] }); // v1.11: gear/passives reserved (features off)
+  const DEF = () => ({ v: 1, id: uid(), name: '', lang: (navigator.language||'').startsWith('vi') ? 'vi' : 'en', L: 1, xp: 0, t: 1, R: 0, E: 0, best: 1, stelae: [], wells: [], pvpW: 0, muted: false, vol: { m: 0.5, s: 0.8, a: 0.5 }, roamCD: {}, stats: {}, as: 'realm', sk: 'classic', nk: 'none', unlocks: [], pvpCD: 0, playSec: 0, marks: 0, riftCD: {}, riftSeen: [], buffUntil: 0, buffEv: -1, tv: 2, shards: 0, mirrorCD: 0, bestiary: {}, sanct: {}, sanctCD: {}, sanctMode: 'normal', gear: { slots: { weapon: null, armor: null, charm: null }, inv: [] }, passives: [], nm: {}, xeno: { lv: 0, xp: 0 }, xs: 0, xcd: {}, xenoOpen: 0, eLog: [], trans: 0, transRate: 0, Ef: 0, catchupFx: false }); // v1.11: gear/passives reserved (features off)
   let S;
   function migrate(o){ // v1.5 inserted 50 titles: convert old title numbers (saves without tv:2)
     if (o && !o.tv) { if (typeof o.t === 'number') o.t = OT(o.t); if (typeof o.best === 'number') o.best = OT(o.best); o.tv = 2; } return o; }
@@ -78,8 +78,8 @@
   function toast(msg, ms=2600){ const d = document.createElement('div'); d.className = 'toast'; d.innerHTML = msg; $('toasts').appendChild(d); setTimeout(()=>d.classList.add('out'), ms); setTimeout(()=>d.remove(), ms + 600); }
   function titleCss(t){ const A = R.auraStyle(t); return A.rainbow ? 'rainbow' : ''; }
   function titleColor(t){ const A = R.auraStyle(t); if (A.void) return `hsl(${A.oh},100%,72%)`; return `hsl(${A.h},${Math.max(40, A.s)}%,${Math.min(80, Math.max(60, A.l))}%)`; }
-  const myStats = () => { const s = F.stats(S.L, S.t, S.E, S.marks, S.shards, sanctBonus(S)); if (!FEATURE_GEAR) return s;
-    const g = gearMult(S); return { hp: s.hp*g.hp, atk: s.atk*g.atk, def: s.def*g.def, crit: s.crit + g.crit }; }; // v1.11 gear hook (off)
+  const myStats = () => { const s = F.stats(S.L, S.t, S.E, S.marks, S.shards, sanctBonus(S)), g = gearMult(S), x = xenoMult(S); // v2.1: Xeno levels; gear hook (off)
+    return { hp: s.hp*g.hp*x, atk: s.atk*g.atk*x, def: s.def*g.def*x, crit: Math.min(0.95, s.crit + g.crit + xenoCrit(S)) }; };
   const buffOn = () => Date.now() < (S.buffUntil || 0);
   const capped = () => S.L >= F.levelCap(S.t);
   const inWell = () => WELLS.some(([x, y]) => Math.hypot(me.x - x, me.y - y) < 70);
@@ -114,10 +114,10 @@
   $('leaveBtn').onclick = () => { Net.leave(); for (const k in others) delete others[k]; scene = 'lobby'; $('hud').style.display = 'none'; $('lobby').style.display = 'flex'; $('langBtn').style.display = ''; closeModal(); refreshRooms(); };
 
   // ---------------- Net glue ----------------
-  const meNet = () => ({ n: S.name, x: Math.round(me.x), y: Math.round(me.y), t: S.t, l: S.L, r: S.R, mv: me.moving ? 1 : 0, f: me.face, host: isHost ? 1 : 0, pw: S.pvpW, sk: S.sk, as: S.as, nk: S.nk });
+  const meNet = () => ({ n: S.name, x: Math.round(me.x), y: Math.round(me.y), t: S.t, l: S.L, r: S.R, mv: me.moving ? 1 : 0, f: me.face, host: isHost ? 1 : 0, pw: S.pvpW, sk: S.sk, as: S.as, nk: S.nk, xl: (S.xeno || {}).lv || 0 });
   Net.on('players', ps => {
     for (const id in ps) { const p = ps[id]; const o = others[id] || (others[id] = { x: p.x, y: p.y, fx: {}, phase: 0, seed: Math.random()*10 });
-      Object.assign(o, { tx: p.x, ty: p.y, t: p.t || 1, n: p.n || '?', l: p.l || 1, r: p.r || 0, mv: p.mv, f: p.f || 1, host: p.host, pw: p.pw || 0, sk: p.sk || 'classic', as: p.as || 'realm', nk: p.nk || 'none' }); }
+      Object.assign(o, { tx: p.x, ty: p.y, t: p.t || 1, n: p.n || '?', l: p.l || 1, r: p.r || 0, mv: p.mv, f: p.f || 1, host: p.host, pw: p.pw || 0, sk: p.sk || 'classic', as: p.as || 'realm', nk: p.nk || 'none', xl: p.xl || 0 }); }
     for (const id in others) if (!ps[id]) delete others[id];
     renderRoomList();
   });
@@ -136,7 +136,8 @@
       $('hTier').textContent = tierName(S.t, S.lang);
       $('hName').textContent = S.name;
       $('hLv').textContent = `${T('level')} ${S.L}` + (S.R ? `  ·  ✦${S.R}` : '');
-      $('btnRebirth').style.display = (S.best >= F.REBIRTH_MIN_TITLE || S.R > 0) ? '' : 'none';
+      $('btnRebirth').style.display = !S.trans && (S.best >= F.REBIRTH_MIN_TITLE || S.R > 0) ? '' : 'none';
+      $('btnTalent').style.display = talentVisible() ? '' : 'none';
       document.querySelectorAll('#hud [data-t]').forEach(el => { el.textContent = T(el.dataset.t); });
       renderRoomList(); if (lbTab === 'world') renderLB();
     }
@@ -148,12 +149,12 @@
     const ev = eventAt(Date.now()); const evOpen = ev.active && S.buffEv !== ev.idx;
     $('hEvent').innerHTML = evOpen ? `✨ ${esc(T('eventLeft').replace('{n}', ev.type[S.lang]).replace('{t}', mmss(ev.endsAt - Date.now())))}` : `<span class="muted">⏳ ${esc(T('eventNext').replace('{t}', mmss(ev.nextAt - Date.now())))}</span>`;
     $('capMsg').style.display = capped() ? 'block' : 'none';
-    if (S.t >= MAX_TITLE) { const fl = towerFloor(S.t); $('capMsg').textContent = '🗼 ' + T('towerNext').replace('{n}', fl).replace('{a}', towerAffixes(fl, Date.now()).map(a => a.ico + ' ' + a[S.lang]).join(' · ')); }
+    if (S.t >= MAX_TITLE) { const fl = towerFloor(S.t), bp = towerBossPas(fl, towerBoss(fl)); $('capMsg').textContent = (fl >= TOWER_NEW_FROM && fl <= HELL_TO ? '🔥 ' : '🗼 ') + T('towerNext').replace('{n}', fl).replace('{a}', towerAffixes(fl, Date.now()).map(a => a.ico + ' ' + a[S.lang]).join(' · ')) + (bp ? ' · 😈 ' + bp.pas.map(id => PASSIVES[id].ico).join('') + ' ' + ROMAN(bp.rank) : ''); }
     else $('capMsg').textContent = T('capReached');
     const tg = scene === 'world' ? nearTarget() : null;
     $('gateBtn').style.display = tg ? 'block' : 'none';
-    if (tg) { const lbl = tg.kind === 'boss' ? '獄 ' + T('gateHint') : tg.kind === 'sanct' ? `⛩ ${T('sanctEnter')} · ${(sanctCursed() ? symbolBoss(tg.sym, 1) : tg.sym)[S.lang]}` : tg.kind === 'mirror' ? `🪞 ${T('enterMirror')} · ${T('mirrorChance').replace('{p}', Math.round(mirrorChance(S)*100))}` : tg.kind === 'roam' ? `☠ ${T('challengeRoam')} · ${S.lang === 'vi' ? tg.r.B.vi : tg.r.B.en}` : `⛩ ${T('enterRift')} · ${RIFT_RANKS[RIFTS[tg.i][2]][S.lang]}`; if ($('gateBtn').textContent !== lbl) $('gateBtn').textContent = lbl;
-      $('gateBtn').style.borderColor = tg.kind === 'boss' || tg.kind === 'mirror' ? '#ff5060' : tg.kind === 'roam' ? '#b060ff' : tg.kind === 'sanct' ? (sanctCursed() ? '#ff2a60' : '#ffd040') : RIFT_RANKS[RIFTS[tg.i][2]].c; }
+    if (tg) { const lbl = tg.kind === 'boss' ? '獄 ' + T('gateHint') : tg.kind === 'xeno' ? `🛸 ${T('xenoChallenge')} · ${XENO_BOSSES[tg.i][S.lang]}` : tg.kind === 'sanct' ? (sanctNM() ? `👁 ${T('sanctEnter')} · ${nmBoss(tg.sym)[S.lang]} · ${ROMAN(nmTier(S, tg.sym.id) + 1)}` : `⛩ ${T('sanctEnter')} · ${(sanctCursed() ? symbolBoss(tg.sym, 1) : tg.sym)[S.lang]}`) : tg.kind === 'mirror' ? `🪞 ${T('enterMirror')} · ${T('mirrorChance').replace('{p}', Math.round(mirrorChance(S)*100))}` : tg.kind === 'roam' ? `☠ ${T('challengeRoam')} · ${S.lang === 'vi' ? tg.r.B.vi : tg.r.B.en}` : `⛩ ${T('enterRift')} · ${RIFT_RANKS[RIFTS[tg.i][2]][S.lang]}`; if ($('gateBtn').textContent !== lbl) $('gateBtn').textContent = lbl;
+      $('gateBtn').style.borderColor = tg.kind === 'boss' || tg.kind === 'mirror' ? '#ff5060' : tg.kind === 'xeno' ? '#40f0ff' : tg.kind === 'roam' ? '#b060ff' : tg.kind === 'sanct' ? (sanctNM() ? '#ff1020' : sanctCursed() ? '#ff2a60' : '#ffd040') : RIFT_RANKS[RIFTS[tg.i][2]].c; }
   }
 
   let lbTab = 'room';
@@ -212,11 +213,49 @@
       ${S.R ? `<tr><td>✦ ${T('rebirths')}</td><td>${S.R}</td></tr><tr><td>💠 ${T('essence')}</td><td>${S.E}</td></tr><tr><td>💠 ${T('essBonus')}</td><td>×${F.essMult(S.E).toFixed(2)}</td></tr>` : ''}
       <tr><td>📈 ${T('xpBonus')}</td><td>×${((1 + S.R)*(1 + 0.05*S.stelae.length)*(1 + 0.01*(S.marks||0))).toFixed(2)}</td></tr>
       ${S.stelae.length ? `<tr><td>🗿 ${T('stelae')}</td><td>${S.stelae.length} / ${STELAE.length}</td></tr>` : ''}
-      ${S.marks ? `<tr><td>⛩ ${T('marks')}</td><td>${S.marks} / ${MAX_MARKS}</td></tr>` : ''}${S.shards ? `<tr><td>🪞 ${T('shards')}</td><td>${S.shards} / ${MAX_SHARDS} (+${Math.round(S.shards*SHARD_BONUS*100)}%)</td></tr>` : ''}${sanctBonus(S) ? `<tr><td>⛩ ${T('sanctBonus')}</td><td>+${Math.round(sanctBonus(S)*100)}%</td></tr>` : ''}${S.best > MAX_TITLE ? `<tr><td>🗼 ${T('towerBest')}</td><td>${S.best - MAX_TITLE}</td></tr>` : ''}<tr><td>⚔ ${T('pvpWins')}</td><td>${S.pvpW}</td></tr></table>${S.marks ? `<p class="muted small">⛩ ${T('markEffect')}</p>` : ''}
+      ${S.marks ? `<tr><td>⛩ ${T('marks')}</td><td>${S.marks} / ${MAX_MARKS}</td></tr>` : ''}${S.shards ? `<tr><td>🪞 ${T('shards')}</td><td>${S.shards} / ${MAX_SHARDS} (+${Math.round(S.shards*SHARD_BONUS*100)}%)</td></tr>` : ''}${sanctBonus(S) ? `<tr><td>⛩ ${T('sanctBonus')}</td><td>+${Math.round(sanctBonus(S)*100)}%</td></tr>` : ''}${S.best > MAX_TITLE ? `<tr><td>🗼 ${T('towerBest')}</td><td>${S.best - MAX_TITLE}</td></tr>` : ''}${Object.keys(S.nm || {}).length ? `<tr><td>👁 ${T('nmTiers')}</td><td>${SYMBOLS.map(x => SYM_ICO[x.id] + ROMAN(nmTier(S, x.id) || 0 ) ).join(' ')}</td></tr>` : ''}${S.trans ? `<tr><td>✧ ${T('trans')}</td><td>+${fmt(S.transRate)}/h</td></tr>` : ''}${(S.xeno || {}).lv ? `<tr><td>🛸 ${T('xenoLv').replace('{n}', S.xeno.lv)}</td><td>+${S.xeno.lv*2}% · ✴+${S.xeno.lv}%</td></tr>` : ''}${activePassives(S).length ? `<tr><td>✦ ${T('talents')}</td><td>${activePassives(S).map(id => PASSIVES[id].ico + ' ' + ROMAN(passiveRank(S, id))).join(' · ')}</td></tr>` : ''}<tr><td>⚔ ${T('pvpWins')}</td><td>${S.pvpW}</td></tr></table>${S.marks ? `<p class="muted small">⛩ ${T('markEffect')}</p>` : ''}
       ${S.stelae.length ? `<div class="lore">${S.stelae.map(i => `<p>🗿 ${esc(STELAE_LORE[i][S.lang])}</p>`).join('')}</div>` : ''}
       <div class="row"><button class="btn" data-close>${T('close')}</button></div>`);
   }
   $('btnStats').onclick = openStats;
+  // ---------------- v2.0 Talents (Thiên Phú) ----------------
+  const SYM_ICO = { azure: '🐉', tiger: '🐯', phoenix: '🔥', tortoise: '🐢', yellowdragon: '👁' };
+  function talentVisible(){ return Object.keys(PASSIVES).some(id => passiveRank(S, id) > 0) || nmOpen(S) || S.best >= MAX_TITLE; }
+  function openTalents(){
+    S.passives = (S.passives || []).filter(id => passiveRank(S, id) > 0); const slots = passiveSlots(S), eq = S.passives;
+    let h = `<h2>✦ ${T('talents')}</h2><div class="muted small">${T('talentHint')}</div><p><b>${T('talentSlots').replace('{a}', Math.min(eq.length, slots)).replace('{b}', slots)}</b></p><div class="wGrid">`;
+    for (const id in PASSIVES) { const P = PASSIVES[id]; if (P.hidden) continue; const r = passiveRank(S, id), ok = r > 0, on = eq.includes(id);
+      const [k, a] = P.src.split(':'), srcTxt = k === 'sanct' ? T('src_sanct').replace('{n}', nmBoss(SYMBOLS.find(x => x.id === a))[S.lang]) : k === 'xeno' ? '🛸 ' + T('xeno') + ': ' + (S.best >= MAX_TITLE ? XENO_BOSSES[+a][S.lang] : '???') : T('src_' + k);
+      const name = ok ? `${P.ico} ${P[S.lang]}` : `🔒 ${(k === 'sanct' && !nmOpen(S)) || (k === 'xeno' && S.best < MAX_TITLE) ? '???' : P[S.lang]}`;
+      h += `<button class="wItem${on ? ' on' : ''}${ok ? '' : ' lockedW'}" data-pas="${id}" ${ok ? '' : 'disabled'}><b>${esc(name)}</b>
+        <small>${ok ? esc(P.d[S.lang].replace('{v}', P.val(r))) + (k === 'sanct' ? ' · ' + T('talentRank').replace('{r}', r).replace('{m}', PASSIVE_RANK_MAX) : '') : esc((k === 'sanct' && !nmOpen(S)) || (k === 'xeno' && S.best < MAX_TITLE) ? T('talentLocked') : srcTxt)}</small>
+        ${ok ? `<small>${on ? '✔ ' + T('equipped') : T('equip')}</small>` : ''}</button>`; }
+    h += `</div><div class="row"><button class="btn" data-close>${T('close')}</button></div>`; modal(h);
+    document.querySelectorAll('[data-pas]:not([disabled])').forEach(b => b.onclick = () => { const id = b.dataset.pas, i = S.passives.indexOf(id);
+      if (i >= 0) S.passives.splice(i, 1); else if (S.passives.length >= passiveSlots(S)) { toast('✦ ' + T('talentFull')); return; } else S.passives.push(id);
+      save(); sfx.lvl(); openTalents(); });
+  }
+  $('btnTalent').onclick = openTalents;
+  // ---------------- v2.1 Handbook (Sổ Tay): what every stat / trait / mechanic / talent does + how to deal with it ----------------
+  let gTab = 'mech';
+  function openGuide(){
+    const tabs = [['stats', 'gStats'], ['traits', 'gTraits'], ['mech', 'gMech'], ['talent', 'gTalent']];
+    let h = `<h2>📘 ${T('guide')}</h2><div class="gTabs tabs">${tabs.map(([k, l]) => `<button data-gt="${k}" class="${gTab === k ? 'on' : ''}">${T(l)}</button>`).join('')}</div><div class="gList">`;
+    const item = (title, desc, counter, how) => `<div class="gItem"><b>${title}</b><div>${esc(desc)}</div>${counter ? `<div class="c">💡 ${T('gCounter')}: ${esc(counter)}</div>` : ''}${how ? `<div class="h">🔑 ${T('gHow')}: ${esc(how)}</div>` : ''}</div>`;
+    if (gTab === 'stats') for (const g of GUIDE_STATS) h += item(`${g.ico} ${esc(T(g.k))}`, g.d[S.lang]);
+    if (gTab === 'traits') for (const id in TRAITS) { const t = TRAITS[id], m = t.m; h += item(`${t.ico} ${esc(t[S.lang])}`, `${T('hp')} ×${m[0]} · ${T('atk')} ×${m[1]} · ${T('def')} ×${m[2]}`); }
+    if (gTab === 'mech') { h += item(`🔱 ${esc(T('mechTransform').split(':')[0])}`, T('mechTransform').replace('{h}', 15).replace('{a}', 20));
+      if (S.best >= MAX_TITLE) h += item(`😈 ${esc(T('bossTalents'))}`, T('bossTalentsD'));
+      for (const A of AFFIXES) h += item(`${A.ico} ${esc(A[S.lang])}`, A.d[S.lang]);
+      const seenX = S.best >= MAX_TITLE; for (const A of XAFFIXES) h += seenX ? item(`${A.ico} ${esc(A[S.lang])} 🛸`, A.d[S.lang]) : item('🛸 ???', '???'); }
+    if (gTab === 'talent') for (const id in PASSIVES) { const P = PASSIVES[id]; if (P.hidden) continue; const r = Math.max(1, passiveRank(S, id)), [k, a] = P.src.split(':'), locked = (k === 'sanct' && !nmOpen(S)) || (k === 'xeno' && S.best < MAX_TITLE);
+      const how = k === 'sanct' ? T('src_sanct').replace('{n}', locked ? '???' : nmBoss(SYMBOLS.find(x => x.id === a))[S.lang]) : k === 'xeno' ? '🛸 ' + T('xeno') + ': ' + (locked ? '???' : XENO_BOSSES[+a][S.lang]) : T('src_' + k);
+      h += item(`${P.ico} ${esc(locked ? '???' : P[S.lang])}${passiveRank(S, id) ? ' ✔' : ''}`, locked ? '???' : P.d[S.lang].replace('{v}', P.val(r)), '', how); }
+    h += `</div><div class="row"><button class="btn" data-close>${T('close')}</button></div>`; modal(h);
+    document.querySelectorAll('[data-gt]').forEach(b => b.onclick = () => { gTab = b.dataset.gt; openGuide(); });
+  }
+  $('btnGuide').onclick = openGuide;
+  $('fightHelp').onclick = () => { gTab = 'mech'; openGuide(); };
 
   $('btnCodex').onclick = () => {
     let h = `<h2>📜 ${T('codex')}</h2><div class="codex">`;
@@ -234,13 +273,14 @@
   };
 
   $('btnRebirth').onclick = () => {
+    if (S.trans) { toast('✧ ' + T('transLocked')); return; }
     if (S.t < F.REBIRTH_MIN_TITLE) { modal(`<h2>✦ ${T('rebirthTitle')}</h2><p class="muted">${T('rebirthLocked')}</p><div class="row"><button class="btn" data-close>${T('close')}</button></div>`); return; }
     const gain = F.essence(S.t);
     modal(`<h2>✦ ${T('rebirthTitle')}</h2><p>${T('rebirthDesc')}</p>
       <p class="big">💠 +${gain} ${T('essence')}</p>
       <p class="muted">${T('rebirthEffect').replace('{x}', gain).replace('{a}', F.essMult(S.E).toFixed(2)).replace('{b}', F.essMult(S.E + gain).toFixed(2)).replace('{m}', (2 + S.R))}</p>
       <div class="row"><button class="btn gold" id="doRebirth">✦ ${T('rebirthDo')}</button><button class="btn" data-close>${T('close')}</button></div>`);
-    $('doRebirth').onclick = () => { S.E += gain; S.R += 1; S.L = 1; S.xp = 0; S.t = 1; save(); pushLB(); closeModal(); flash('#fff', 1.2); sfx.rebirth(); refreshHUD(true);
+    $('doRebirth').onclick = () => { if (S.trans) return; S.E += gain; S.R += 1; S.eLog = (S.eLog || []).concat([[Math.round(S.playSec), S.E]]).slice(-300); S.L = 1; S.xp = 0; S.t = 1; save(); pushLB(); closeModal(); flash('#fff', 1.2); sfx.rebirth(); refreshHUD(true);
       bigBanner('✦ ' + T('rebirthTitle').toUpperCase() + ' ✦', `${T('rebirths')}: ${S.R} · 💠 ${S.E}`); };
   };
 
@@ -251,11 +291,13 @@
       <label>🔔 ${T('sfxVol')}<input type="range" id="vS" min="0" max="1" step="0.05" value="${S.vol.s}"></label>
       <label>🔥 ${T('auraVol')}<input type="range" id="vA" min="0" max="1" step="0.05" value="${S.vol.a}"></label></div>
       <p class="muted small">${Object.keys(AudioM.files).length ? T('audioFiles').replace('{n}', Object.keys(AudioM.files).length) : T('audioNone')}</p>
+      <div class="row"><button class="btn" id="sCatch">✨ ${T('catchupFx')}: ${S.catchupFx ? T('on') : T('off')}</button></div>
       <div class="row"><button class="btn" id="sExp">💾 ${T('exportSave')}</button><button class="btn" id="sImp">📥 ${T('importSave')}</button></div>
       <textarea id="sBox" rows="3" style="width:100%;display:none"></textarea>
       <p class="muted small">GodK Bá Khí v${GAME_VERSION} · ${Net.mode}</p>
       <div class="row"><button class="btn red" id="sLeave">${T('leave')}</button><button class="btn" data-close>${T('close')}</button></div>`);
     $('sLang').onclick = () => { S.lang = S.lang === 'vi' ? 'en' : 'vi'; save(); refreshHUD(true); lobbyTexts(); $('btnSettings').onclick(); };
+    $('sCatch').onclick = () => { S.catchupFx = !S.catchupFx; save(); $('btnSettings').onclick(); };
     $('sMute').onclick = () => { S.muted = !S.muted; AudioM.setMuted(S.muted); save(); $('btnSettings').onclick(); };
     [['vM', 'm'], ['vS', 's'], ['vA', 'a']].forEach(([id, k]) => { $(id).oninput = e => { S.vol[k] = +e.target.value; AudioM.setVol(S.vol); }; $(id).onchange = () => { save(); if (k === 's') sfx.lvl(); }; });
     $('sExp').onclick = () => { const b = $('sBox'); b.style.display = 'block'; b.value = btoa(unescape(encodeURIComponent(JSON.stringify(S)))); b.select(); };
@@ -352,7 +394,7 @@
     }
     if (autoTitle && capped() && S.t < S.best) S.t++;
     if (capped()) S.xp = 0;
-    if (S.t !== t0) { if (Date.now() - skipToastT > 4000) { skipToastT = Date.now(); toast('💥 ' + T('gateSkip') + (S.t - t0 > 1 ? ` ×${S.t - t0}` : '')); } titleFx(t0, false); }
+    if (S.t !== t0) { if (S.catchupFx) { if (Date.now() - skipToastT > 4000) { skipToastT = Date.now(); toast('💥 ' + T('gateSkip') + (S.t - t0 > 1 ? ` ×${S.t - t0}` : '')); } titleFx(t0, false); } else titleQuiet(); }
     return ups;
   }
   function titleUp(fromGate){
@@ -369,15 +411,23 @@
   let skipToastT = 0;
   function tryAutoBreak(){
     if (S.t >= S.best || !capped()) return;
+    if (!S.catchupFx) { S.t += 1; S.xp = 0; titleQuiet(); return; } // v2.2: quiet by default (no banner storm after rebirth)
     if (Date.now() - skipToastT > 4000) { skipToastT = Date.now(); toast('💥 ' + T('gateSkip')); }
     titleUp(false);
   }
+  // v2.2: re-passing already-conquered gates is silent; ONE banner when you are back at your highest title (Settings can restore the old effects)
+  let quietT = 0;
+  function titleQuiet(){ refreshHUD(true); const now = Date.now(), done = S.t >= S.best;
+    if (done || now - quietT > 3000) { quietT = now; save(); pushLB(); Net.sendMe(meNet(), true); }
+    if (done) { sfx.title(); flash(titleColor(S.t), 0.5); bigBanner(T('caughtUp'), tn(S.t), titleColor(S.t), titleCss(S.t)); } }
 
   // ---------------- Interact / Gate ----------------
   const riftReady = i => Date.now() >= ((S.riftCD || {})[i] || 0);
   function nearTarget(){
     if (capped() && Math.hypot(me.x - GATE.x, me.y - GATE.y) < 170) return { kind: 'boss' };
     if (Date.now() >= (S.mirrorCD || 0) && Math.hypot(me.x - MIRROR_GATE.x, me.y - MIRROR_GATE.y) < 130) return { kind: 'mirror' };
+    if (S.best >= MAX_TITLE && !S.xenoOpen && Math.hypot(me.x - XENO.gate[0], me.y - XENO.gate[1]) < 160 && xenoReady(0)) return { kind: 'xeno', i: 0 };
+    if (onXeno()) for (const w of ['core', 'spire']) { const [ax, ay] = xenoAbs(XENO_SPOTS[w]); if (Math.hypot(me.x - ax, me.y - ay) < 170) { const i = xenoTargetIdx(w); if (i >= 0 && xenoReady(i)) return { kind: 'xeno', i }; } }
     if (S.sanctOpen && S.best >= SANCTUM.unlockTitle) for (const sym of SYMBOLS) { if (Math.hypot(me.x - SANCTUM.x - sym.dx, me.y - SANCTUM.y - sym.dy) < (sym.center ? 150 : 120)) { const st = sanctState(sym); if (st === 'ready') return { kind: 'sanct', sym }; } }
     for (let i = 0; i < RIFTS.length; i++) if (riftReady(i) && Math.hypot(me.x - RIFTS[i][0], me.y - RIFTS[i][1]) < 140) return { kind: 'rift', i };
     const pool = unlockedBosses(S.t), now = Date.now();
@@ -387,10 +437,25 @@
   function interact(){
     if (scene !== 'world') return;
     const tg = nearTarget(); if (!tg) return;
-    if (tg.kind === 'boss') startBoss(); else if (tg.kind === 'sanct') startSanct(tg.sym); else if (tg.kind === 'mirror') startMirror(); else if (tg.kind === 'roam') startRoam(tg.r); else startRift(tg.i);
+    if (tg.kind === 'boss') startBoss(); else if (tg.kind === 'xeno') startXeno(tg.i); else if (tg.kind === 'sanct') startSanct(tg.sym); else if (tg.kind === 'mirror') startMirror(); else if (tg.kind === 'roam') startRoam(tg.r); else startRift(tg.i);
   }
   $('gateBtn').onclick = interact;
-  $('sanctBtn').onclick = () => { S.sanctMode = S.sanctMode === 'cursed' ? 'normal' : 'cursed'; save(); sfx.transform(); flash(S.sanctMode === 'cursed' ? '#600020' : '#fff6c0', 0.5); };
+  function openTranscend(){ // v2.2 Siêu Thoát
+    const c = transCheck(S), base = transRecentRate(S), after = base*TRANS.mult, ok = c.r && c.x && c.log && base > 0;
+    const need = [[c.r, T('transNeedR').replace('{c}', S.R).replace('{v}', TRANS.minR)], [c.x, T('transNeedX')], [c.log, T('transNeedLog').replace('{c}', c.logN).replace('{v}', TRANS.logMin).replace('{m}', TRANS.spanMin)]];
+    modal(`<h2>${T('transTitle')}</h2><p>${T('transDesc')}</p>
+      ${base > 0 ? `<p class="big">💠 ${T('transRate').replace('{a}', fmt(base)).replace('{b}', fmt(after)).replace('{m}', TRANS.mult)}</p>` : ''}
+      ${ok ? '' : `<p class="muted">${T('transNo')}</p><ul style="text-align:left">${need.map(([o, t]) => `<li>${o ? '✔' : '✖'} ${esc(t)}</li>`).join('')}</ul>`}
+      <div class="row">${ok ? `<button class="btn gold" id="doTrans">${T('transDo')}</button>` : ''}<button class="btn" data-close>${T('close')}</button></div>`);
+    if (ok) $('doTrans').onclick = () => { modal(`<h2>${T('transTitle')}</h2><p class="big">${T('transSure')}</p><div class="row"><button class="btn red" id="doTrans2">${T('transYes')}</button><button class="btn" data-close>${T('close')}</button></div>`);
+      $('doTrans2').onclick = () => { S.trans = 1; S.transRate = after; S.transAt = Math.round(S.playSec); S.Ef = 0; save(); pushLB(); closeModal(); refreshHUD(true); sfx.title(); flash('#fff8d8', 1.2);
+        bigBanner(T('transTitle'), T('transDone'), '#ffe9a8'); Net.sendMe(meNet(), true); }; };
+  }
+  $('transBtn').onclick = openTranscend;
+  $('xenoBtn').onclick = () => { const m = $('xenoBtn').dataset.m; if (m === 'back') { me.x = XENO.gate[0]; me.y = XENO.gate[1] + 200; } else if (m === 'go') { const [ax, ay] = xenoAbs(XENO_SPOTS.pad); me.x = ax; me.y = ay; }
+    sfx.transform(); flash('#7ff8ff', 0.7); Net.sendMe(meNet(), true); };
+  $('sanctBtn').onclick = () => { S.sanctMode = S.sanctMode === 'normal' ? 'cursed' : S.sanctMode === 'cursed' && nmOpen(S) ? 'nightmare' : 'normal'; save(); sfx.transform();
+    flash(S.sanctMode === 'nightmare' ? '#000' : S.sanctMode === 'cursed' ? '#600020' : '#fff6c0', S.sanctMode === 'nightmare' ? 0.95 : 0.5); if (S.sanctMode === 'nightmare') bigBanner('👁', T('nmSanct'), '#ff3040'); };
 
   // ---------------- Fights (boss & PvP) ----------------
   let fight = null;
@@ -400,7 +465,8 @@
     if (g >= MAX_TITLE) { // v1.8 GodK Tower
       const fl = towerFloor(g), B = towerBoss(fl), aff = towerAffixes(fl, Date.now()), ids = aff.map(a => a.id), st = Object.assign({}, F.boss(g)), guardian = fl % 10 === 0;
       if (guardian) { st.hp *= 1.3; st.atk *= 1.15; }
-      beginBossFight({ kind: 'boss', g, B, st, form: towerForm(fl), jump: 1, tower: { fl, aff: ids, guardian, name: towerBossName(B, fl, S.lang) } }); return; }
+      if (fl >= TOWER_NEW_FROM) { st.hp *= TOWER_HELL_M; st.atk *= TOWER_HELL_M; st.def *= TOWER_HELL_M; } // v2.3: talents era
+      beginBossFight({ kind: 'boss', g, B, st, form: towerForm(fl), jump: 1, bp: towerBossPas(fl, B), tower: { fl, aff: ids, guardian, hell: !!B.hell, name: towerBossName(B, fl, S.lang) } }); return; }
     beginBossFight({ kind: 'boss', g, B: bossFor(g), st: F.boss(g), form: bossForm(g), jump: isRealmEnd(g) ? 2 : 1 }); }
   function startRift(i){
     const RK = RIFT_RANKS[RIFTS[i][2]], g = S.t, b = F.boss(g), pool = unlockedBosses(g);
@@ -413,16 +479,22 @@
   }
   // ---------------- v1.9 Four Symbols Sanctum ----------------
   const sanctCursed = () => S.sanctMode === 'cursed' && sanctCursedOpen(S);
-  function sanctState(sym){ const cur = sanctCursed(), key = sym.id + (cur ? '_c' : ''), sn = S.sanct || {};
+  const sanctNM = () => S.sanctMode === 'nightmare' && sanctCursedOpen(S) && nmOpen(S); // v2.0
+  const sanctBossOf = sym => sanctNM() ? nmBoss(sym) : symbolBoss(sym, sanctCursed());
+  const sanctRefOf = sym => sanctNM() ? nmRef(nmTier(S, sym.id) + 1, sym.center) : SANCT_REF[sanctCursed() ? 'cursed' : 'normal'][sym.center ? 1 : 0];
+  function sanctState(sym){
+    if (sanctNM()) { const k = nmTier(S, sym.id) + 1; if (sym.center && !SYMBOLS.filter(x => !x.center).every(x => nmTier(S, x.id) >= k)) return 'locked';
+      return Date.now() < ((S.sanctCD || {})['nm_' + sym.id] || 0) ? 'cd' : 'ready'; }
+    const cur = sanctCursed(), key = sym.id + (cur ? '_c' : ''), sn = S.sanct || {};
     if (S.best < SANCTUM.unlockTitle) return 'locked';
     if (sym.center && !SYMBOLS.filter(x => !x.center).every(x => sn[x.id + (cur ? '_c' : '')])) return 'locked';
     if (Date.now() < ((S.sanctCD || {})[key] || 0)) return 'cd'; return sn[key] ? 'done' : 'ready'; }
   function sanctThreat(sym){ // rough win estimate shown on the pedestal (☠☠☠ … ✓)
-    const cur = sanctCursed(), B = symbolBoss(sym, cur), b = applyTrait(F.boss(SANCT_REF[cur ? 'cursed' : 'normal'][sym.center ? 1 : 0]), B), p = myStats();
+    const B = sanctBossOf(sym), b = applyTrait(F.boss(sanctRefOf(sym)), B), p = myStats();
     const m = (p.hp / F.dmg(b.atk, p.def)) / (b.hp / (F.dmg(p.atk, b.def)*1.15)); return m < 0.4 ? 0 : m < 0.75 ? 1 : m < 1.1 ? 2 : 3; }
   function startSanct(sym){
-    const cur = sanctCursed(), B = symbolBoss(sym, cur), st = F.boss(SANCT_REF[cur ? 'cursed' : 'normal'][sym.center ? 1 : 0]);
-    beginBossFight({ kind: 'sanct', i: sym.id, g: S.t, mechG: SANCT_REF[cur ? 'cursed' : 'normal'][sym.center ? 1 : 0], B, st, form: cur ? 11 : (sym.center ? 10 : 9), jump: 1 });
+    const cur = sanctCursed(), nm = sanctNM(), B = sanctBossOf(sym), ref = sanctRefOf(sym), st = F.boss(ref);
+    beginBossFight({ kind: 'sanct', i: sym.id, g: S.t, mechG: ref, B, st, form: nm ? 12 : cur ? 11 : (sym.center ? 10 : 9), jump: 1, nmTier: nm ? nmTier(S, sym.id) + 1 : 0 });
   }
   function startMirror(){
     const p = myStats(); const st = { hp: p.hp*MIRROR_MULT, atk: p.atk*MIRROR_MULT, def: p.def*MIRROR_MULT, crit: p.crit };
@@ -437,33 +509,38 @@
     if (o.tower) o.tower.aff = aff;
     const hue = (B.hue + posOf(g)*6) % 360;
     fight = { kind: o.kind, riftI: o.i, g, B, rng: Math.random, hue, form: o.form, jump: o.jump, aBoost: 0, transformed: o.kind === 'mirror' || B.id === 'finalmirror', script: o.script, memPhase: -1,
-      L: { name: S.name, t: S.t, st: myStats(), hp: 0, fx: {}, hurt: 0, atk: 0, sk: S.sk, as: S.as, pas: activePassives(S), shards: S.shards || 0 },
+      L: { name: S.name, t: S.t, st: myStats(), hp: 0, fx: {}, hurt: 0, atk: 0, sk: S.sk, as: S.as, pas: activePassives(S), prank: passiveRanks(S), shards: S.shards || 0 },
       Rt: { name: o.kind === 'mirror' || B.id === 'finalmirror' ? (S.lang === 'vi' ? B.vi : B.en) : bossName(B, o.form), st, hp: 0, hurt: 0, atk: 0, fx: {} },
-      phase: 'intro', timer: 0, round: 0, beams: [], nums: [], intro: B.intro[S.lang], result: null, tower: o.tower || null, aff: aff.length ? aff : null, enr: 1 };
+      phase: 'intro', timer: 0, round: 0, beams: [], nums: [], intro: B.intro[S.lang], result: null, tower: o.tower || null, nmTier: o.nmTier || 0, aff: aff.length ? aff : null, enr: 1 };
     fight.L.hp = fight.L.st.hp; fight.Rt.hp = st.hp;
     if (o.tower) { const tw = o.tower; fight.Rt.name = `${tw.name} · ${BOSS_FORMS[o.form][S.lang]}`; fight.transformed = true; fight.towerBoost = Math.min(1.4, 0.2 + tw.fl/45);
       fight.intro = [T('towerFloor').replace('{n}', tw.fl)].concat(fight.intro);
       if (tw.guardian) setTimeout(() => { if (fight && fight.tower === tw) { bigBanner(T('towerGuardian'), tw.name, `hsl(${B.hue},100%,65%)`); flash('#fff', 0.5); sfx.transform(); } }, 300); }
     if (aff.includes('void')) fight.L.st = Object.assign({}, fight.L.st, { crit: 0 });
-    if (['boss', 'rift', 'roam', 'sanct'].includes(o.kind) && B.id !== 'finalmirror') fight.mech = F.transformMech(o.mechG || g, o.kind === 'boss' && isRealmEnd(g));
-    if (o.kind === 'sanct') fight.Rt.name = S.lang === 'vi' ? B.vi : B.en;
+    if (['boss', 'rift', 'roam', 'sanct', 'xeno'].includes(o.kind) && B.id !== 'finalmirror') fight.mech = F.transformMech(o.mechG || g, o.kind === 'boss' && isRealmEnd(g));
+    if (o.bp) { fight.Rt.pas = o.bp.pas.slice(); fight.Rt.prank = o.bp.prank; } // v2.3 Tower boss talents
+    if (aff.includes('mimic') && fight.L.pas.length) { fight.Rt.pas = [fight.L.pas[0]]; fight.Rt.prank = fight.L.prank; fight.Rt.shards = S.shards || 0; } // v2.1 Assimilate
+    if (o.kind === 'xeno') fight.Rt.name = S.lang === 'vi' ? B.vi : B.en;
+    if (o.kind === 'sanct') fight.Rt.name = (S.lang === 'vi' ? B.vi : B.en) + (o.nmTier ? ' · ' + ROMAN(o.nmTier) : '');
     S.bestiary = S.bestiary || {}; const be = S.bestiary[B.id] || (S.bestiary[B.id] = { k: 0 }); be.w = o.tower ? 'tower' : o.kind === 'boss' ? (B.id === 'finalmirror' ? 'final' : 'gate') : o.kind;
-    scene = 'fight'; $('hud').classList.add('dim'); $('fightUI').style.display = 'block'; sfx.beat();
+    scene = 'fight'; $('hud').classList.add('dim'); $('fightUI').style.display = 'block'; $('fightHelp').style.display = 'block'; sfx.beat();
     Net.sendMe(Object.assign(meNet(), { mv: 0 }), true);
   }
   function startPvP(d, myRole){
     const a = d.sa, b = d.sb;
     fight = { kind: 'pvp', rng: mulberry(d.seed), myRole, did: d.id,
-      L: { name: a.n, t: a.t, st: a, hp: a.hp, fx: {}, hurt: 0, atk: 0, sk: a.sk, as: a.as, pas: a.pas || [], shards: a.shards || 0 },
-      Rt: { name: b.n, t: b.t, st: b, hp: b.hp, fx: {}, hurt: 0, atk: 0, sk: b.sk, as: b.as, pas: b.pas || [], shards: b.shards || 0 },
+      L: { name: a.n, t: a.t, st: a, hp: a.hp, fx: {}, hurt: 0, atk: 0, sk: a.sk, as: a.as, pas: a.pas || [], prank: a.prank || {}, shards: a.shards || 0 },
+      Rt: { name: b.n, t: b.t, st: b, hp: b.hp, fx: {}, hurt: 0, atk: 0, sk: b.sk, as: b.as, pas: b.pas || [], prank: b.prank || {}, shards: b.shards || 0 },
       phase: 'intro', timer: 0, round: 0, beams: [], nums: [], intro: [`${a.n}  ⚔  ${b.n}`, T('fightStart') + '!'], result: null , enr: 1 };
     scene = 'fight'; $('hud').classList.add('dim'); $('fightUI').style.display = 'block'; closeModal(); sfx.beat();
   }
   // v1.11: passive hooks for either side (no-op while FEATURE_PASSIVES is off: side.pas is empty)
-  function pas(f, me, foe, hook, d){ if (!me.pas || !me.pas.length) return d; const c = { f, me, foe };
+  function pas(f, me, foe, hook, d, crit){ if (!me.pas || !me.pas.length) return hook === 'onDeath' ? false : d; const c = { f, me, foe, crit };
     for (const id of me.pas) { const P = PASSIVES[id]; if (!P || !P[hook]) continue; if (hook === 'onDeath') { if (P.onDeath(c)) return true; } else if (hook === 'onTurn') P.onTurn(c); else d = P[hook](c, d); }
     return hook === 'onDeath' ? false : d; }
   const dead = (f, me, foe) => me.hp <= 0 && !pas(f, me, foe, 'onDeath');
+  function xActive(f){ const a = f.aff || []; if (!a.includes('phases')) return a; // v2.1 Nebula Sower: mechanic changes every 25% HP
+    const q = Math.min(3, Math.floor((1 - Math.max(0, f.Rt.hp)/f.Rt.st.hp)*4)); if (q !== f.ph4) { f.ph4 = q; if (f.round > 1) { const X_ = XAFFIXES.find(x => x.id === XPHASES[q]); bigBanner('♻', X_.ico + ' ' + X_[S.lang], '#b080ff'); sfx.transform(); } } return a.concat([XPHASES[q]]); }
   function hitCalc(att, def, rng){ let d = F.dmg(att.atk, def.def) * (0.9 + rng()*0.2); const crit = rng() < att.crit; if (crit) d *= 2.5; return [d, crit]; }
   function fightStep(dt){
     const f = fight; f.timer += dt; f.L.hurt = Math.max(0, f.L.hurt - dt); f.Rt.hurt = Math.max(0, f.Rt.hurt - dt); f.L.atk = Math.max(0, f.L.atk - dt*2); f.Rt.atk = Math.max(0, f.Rt.atk - dt*2);
@@ -472,28 +549,42 @@
       const tick = 0.5;
       while (f.timer >= tick && f.phase === 'fight') {
         f.timer -= tick; f.round++;
-        // left attacks
-        const AF = f.aff;
-        let [d, c] = hitCalc(f.L.st, f.Rt.st, f.rng); d = pas(f, f.Rt, f.L, 'onTake', pas(f, f.L, f.Rt, 'onDeal', d)); if (AF && AF.includes('shield') && f.Rt.hp > f.Rt.st.hp*0.5) d *= 0.5;
-        if (AF && AF.includes('thorns')) { f.L.hp -= d*0.2; if (dead(f, f.L, f.Rt)) { f.L.hp = 0; end(false); break; } }
-        if (f.script !== undefined) { d *= f.script ? 1.3 : 0.8; if (!f.script && f.Rt.hp - d <= 0) d = Math.max(0, f.Rt.hp - 1); } f.Rt.hp -= d; f.Rt.hurt = 0.25; f.L.atk = 1;
-        f.beams.push({ from: 'L', life: 0.35, crit: c }); f.nums.push({ side: 'R', v: d, crit: c, life: 1, ox: (Math.random() - 0.5)*80 }); sfx.hit();
-        if (dead(f, f.Rt, f.L)) { end(true); break; }
-        if (f.mech && !f.mechDone && f.Rt.hp < f.Rt.st.hp*0.5) { f.mechDone = true; f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + f.Rt.st.hp*f.mech[0]); f.Rt.st = Object.assign({}, f.Rt.st, { atk: f.Rt.st.atk*f.mech[1] }); f.aBoost = 1;
+        const AF = f.aff || [], XA = xActive(f), noHeal = f.kind !== 'pvp' && (f.L.pas || []).includes('purify'); // v2.1: Purify blocks every boss heal
+        // left attacks (v2.1: Twin Shadow = a second, separate hit; Map-2 mechanics apply per hit)
+        let over = 0;
+        for (const mul of ((f.L.pas || []).includes('multi') ? [1, 0.5] : [1])) {
+          let [d, c] = hitCalc(f.L.st, f.Rt.st, f.rng); d *= mul; d = pas(f, f.Rt, f.L, 'onTake', pas(f, f.L, f.Rt, 'onDeal', d, c), c);
+          if (AF.includes('shield') && f.Rt.hp > f.Rt.st.hp*0.5) d *= 0.5;
+          if (XA.includes('quantum') && !c) d = 0;                          // Quantum Shield: only crits land
+          if (XA.includes('dmgcap')) d = Math.min(d, f.Rt.st.hp*0.03);      // Damage Cap: ≤3% max HP per hit
+          if (AF.includes('thorns')) { f.L.hp -= d*0.2; if (dead(f, f.L, f.Rt)) { f.L.hp = 0; over = 2; break; } }
+          if (XA.includes('reflect') && !c && d > 0) { f.L.hp -= d*0.5; f.L.hurt = 0.25; if (dead(f, f.L, f.Rt)) { f.L.hp = 0; over = 2; break; } } // Reflector
+          if (f.script !== undefined) { d *= f.script ? 1.3 : 0.8; if (!f.script && f.Rt.hp - d <= 0) d = Math.max(0, f.Rt.hp - 1); } f.Rt.hp -= d; f.Rt.hurt = 0.25; f.L.atk = 1;
+          f.beams.push({ from: 'L', life: 0.35, crit: c }); f.nums.push({ side: 'R', v: d, crit: c, imm: d === 0, life: 1, ox: (Math.random() - 0.5)*80 }); sfx.hit();
+          if (dead(f, f.Rt, f.L)) { over = 1; break; }
+          if (XA.includes('absorb') && !noHeal) f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + d*0.3); // Absorb
+        }
+        if (over) { end(over === 1); break; }
+        if (f.mech && !f.mechDone && f.Rt.hp < f.Rt.st.hp*0.5) { f.mechDone = true; if (!noHeal) f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + f.Rt.st.hp*f.mech[0]); f.Rt.st = Object.assign({}, f.Rt.st, { atk: f.Rt.st.atk*f.mech[1] }); f.aBoost = 1;
           if (f.transformed) { flash('#ff4060', 0.5); sfx.transform(); bigBanner(T('awaken'), f.Rt.name, '#ff6a80'); } }
         if (f.kind !== 'pvp' && !f.transformed && f.Rt.hp < f.Rt.st.hp*0.5) { f.transformed = true; f.form = Math.min(BOSS_FORMS.length - 1, f.form + f.jump); f.aBoost = 1;
-          f.Rt.name = bossName(f.B, f.form); const FF = BOSS_FORMS[f.form]; flash(`hsl(${FF.h},${FF.s}%,${FF.l}%)`, 0.7); sfx.transform();
+          f.Rt.name = bossName(f.B, f.form) + (f.nmTier ? ' · ' + ROMAN(f.nmTier) : ''); const FF = BOSS_FORMS[f.form]; flash(`hsl(${FF.h},${FF.s}%,${FF.l}%)`, 0.7); sfx.transform();
           bigBanner(T('transform'), f.Rt.name, `hsl(${FF.h},${FF.s}%,${Math.max(60, FF.l)}%)`); }
-        if (AF) { if (AF.includes('enrage')) f.enr *= 1.06; if (AF.includes('regen')) f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + f.Rt.st.hp*0.03); }
-        [d, c] = hitCalc(f.Rt.st, f.L.st, f.rng); if (AF && c && AF.includes('crit')) d *= 1.2; d *= (f.enr || 1);
-        if (AF && AF.includes('twin') && f.round % 3 === 0) d *= 2;
-        d = pas(f, f.L, f.Rt, 'onTake', pas(f, f.Rt, f.L, 'onDeal', d));
-        if (AF && AF.includes('leech')) f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + d*0.3);
-        if (f.script !== undefined) { d *= f.script ? 0.8 : 1.3; if (f.script && f.L.hp - d <= 0) d = Math.max(0, f.L.hp - 1); } f.L.hp -= d; f.L.hurt = 0.25; f.Rt.atk = 1;
-        f.beams.push({ from: 'R', life: 0.35, crit: c }); f.nums.push({ side: 'L', v: d, crit: c, life: 1, ox: (Math.random() - 0.5)*80 });
-        if (f.kind !== 'pvp' && c) flash('#300', 0.6); if (f.tower) f.shake = Math.min(14, 3 + f.tower.fl/8);
-        if (dead(f, f.L, f.Rt)) { end(false); break; }
-        if (f.Rt.hp <= 0 && dead(f, f.Rt, f.L)) { end(true); break; } // reflect damage
+        if (AF.includes('enrage')) f.enr *= 1.06; if (AF.includes('regen') && !noHeal) f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + f.Rt.st.hp*0.03);
+        // right attacks (Twin Shadow also works for a PvP opponent)
+        let over2 = 0, anyCrit = false;
+        for (const mul of ((f.Rt.pas || []).includes('multi') ? [1, 0.5] : [1])) {
+          let [d, c] = hitCalc(f.Rt.st, f.L.st, f.rng); d *= mul; if (c && AF.includes('crit')) d *= 1.2; d *= (f.enr || 1);
+          if (mul === 1 && AF.includes('twin') && f.round % 3 === 0) d *= 2;
+          d = pas(f, f.L, f.Rt, 'onTake', pas(f, f.Rt, f.L, 'onDeal', d, c), c);
+          if (AF.includes('leech') && !noHeal) f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + d*0.3);
+          if (f.script !== undefined) { d *= f.script ? 0.8 : 1.3; if (f.script && f.L.hp - d <= 0) d = Math.max(0, f.L.hp - 1); } f.L.hp -= d; f.L.hurt = 0.25; f.Rt.atk = 1; anyCrit = anyCrit || c;
+          f.beams.push({ from: 'R', life: 0.35, crit: c }); f.nums.push({ side: 'L', v: d, crit: c, life: 1, ox: (Math.random() - 0.5)*80 });
+          if (dead(f, f.L, f.Rt)) { over2 = 2; break; }
+          if (f.Rt.hp <= 0 && dead(f, f.Rt, f.L)) { over2 = 1; break; } // reflect damage
+        }
+        if (f.kind !== 'pvp' && anyCrit) flash('#300', 0.6); if (f.tower) f.shake = Math.min(14, 3 + f.tower.fl/8);
+        if (over2) { end(over2 === 1); break; }
         pas(f, f.L, f.Rt, 'onTurn'); pas(f, f.Rt, f.L, 'onTurn');
         if (f.round >= 70) { end(f.script !== undefined ? f.script : f.kind === 'pvp' ? (f.L.hp/f.L.st.hp >= f.Rt.hp/f.Rt.st.hp) : false); break; }
       }
@@ -504,14 +595,32 @@
   function end(leftWon){
     const f = fight; f.phase = 'end'; f.timer = 0; f.result = leftWon;
     if (f.kind !== 'pvp' && leftWon && f.B && S.bestiary && S.bestiary[f.B.id]) S.bestiary[f.B.id].k++;
-    if (f.kind !== 'pvp') { if (leftWon) { sfx.win(); bigBanner(T('victory'), f.Rt.name, '#ffd76a'); } else { sfx.lose(); bigBanner(f.Rt.name, T('defeat'), '#f44', '', f.tower ? T('towerFloor').replace('{n}', f.tower.fl) : f.kind === 'rift' ? T('riftLose') : f.kind === 'roam' ? T('roamCD') : f.kind === 'mirror' ? T('mirrorLose') : T('bossLoseHint')); } }
+    if (f.kind !== 'pvp') { if (leftWon) { sfx.win(); bigBanner(T('victory'), f.Rt.name, '#ffd76a'); } else { sfx.lose(); bigBanner(f.Rt.name, T('defeat'), '#f44', '', f.tower ? T('towerFloor').replace('{n}', f.tower.fl) : f.kind === 'rift' ? T('riftLose') : f.kind === 'roam' ? T('roamCD') : f.kind === 'mirror' ? T('mirrorLose') : f.kind === 'xeno' ? T('xenoLose') : T('bossLoseHint')); } }
     else { const iWon = (f.myRole === 'a') === leftWon; if (iWon) { S.pvpW++; save(); sfx.win(); } else sfx.lose(); bigBanner(iWon ? T('victory') : T('defeat'), `${leftWon ? f.L.name : f.Rt.name} 👑`, iWon ? '#ffd76a' : '#f44'); }
   }
   function finishFight(){
-    const f = fight; fight = null; scene = 'world'; $('hud').classList.remove('dim'); $('fightUI').style.display = 'none';
+    const f = fight; fight = null; scene = 'world'; $('hud').classList.remove('dim'); $('fightUI').style.display = 'none'; $('fightHelp').style.display = 'none';
     if (f.kind === 'boss') { me.x = GATE.x; me.y = GATE.y + 200; if (f.result) { S.stats.bossWins = (S.stats.bossWins || 0) + 1;
       if (f.B.id === 'finalmirror') { S.stats.finalWins = (S.stats.finalWins || 0) + 1; const first = !S.ended; S.ended = true; save(); if (first) { playEnding(() => titleUp(true)); return; } }
       titleUp(true); } }
+    else if (f.kind === 'xeno') { const i = f.riftI, B = XENO_BOSSES[i]; S.xcd = S.xcd || {}; S.xcd[i] = Date.now() + (f.result ? XENO_CD_WIN : XENO_CD_LOSE);
+      if (B.at === 'gate') { me.x = XENO.gate[0]; me.y = XENO.gate[1] + 170; } else { const [ax, ay] = xenoAbs(XENO_SPOTS[B.at]); me.x = ax; me.y = ay + 200; }
+      if (f.result && (S.xs || 0) === i) { S.xs = i + 1; const rw = xenoRewardText(B.reward); sfx.title(); flash('#40f0ff', 0.8);
+        toast('🛸 ' + T('xenoFirst').replace('{n}', B[S.lang]).replace('{r}', rw), 7000);
+        if (B.reward === 'open') { S.xenoOpen = 1; setTimeout(() => bigBanner('🛸 ' + T('xeno'), T('xenoOpen'), '#7ff8ff'), 600); }
+        const pid = Object.keys(PASSIVES).find(k => PASSIVES[k].src === 'xeno:' + i); if (pid) { S.passives = S.passives || []; if (!S.passives.includes(pid) && S.passives.length < passiveSlots(S)) S.passives.push(pid); }
+        pushLB(); }
+      else if (f.result) { const got = F.xpRate(S, true, false, false) * SANCT_XP_SEC; addXP(got); S.xeno = S.xeno || { lv: 0, xp: 0 }; S.xeno.xp += XENO_NEED(S.xeno.lv)*0.5; toast('🛸 ' + T('xenoAgain').replace('{x}', fmt(got)), 4500); }
+      save(); }
+    else if (f.kind === 'sanct' && f.nmTier) { const sym = SYMBOLS.find(x => x.id === f.riftI); me.x = SANCTUM.x + sym.dx*0.6; me.y = SANCTUM.y + sym.dy*0.6 + 90; // v2.0 Nightmare
+      S.sanctCD = S.sanctCD || {}; S.nm = S.nm || {}; S.sanctCD['nm_' + sym.id] = Date.now() + (f.result ? SANCT_CD_WIN : SANCT_CD_LOSE);
+      if (f.result && f.nmTier > nmTier(S, sym.id)) { S.nm[sym.id] = f.nmTier; const pid = Object.keys(PASSIVES).find(k => PASSIVES[k].src === 'sanct:' + sym.id), P = PASSIVES[pid], pn = P[S.lang];
+        const msg = f.nmTier === 1 ? T('nmUnlockPas').replace('{n}', P.ico + ' ' + pn) : f.nmTier <= PASSIVE_RANK_MAX ? T('nmRankUp').replace('{n}', P.ico + ' ' + pn).replace('{r}', f.nmTier) : T('nmRankMax').replace('{n}', P.ico + ' ' + pn);
+        if (f.nmTier === 1) { S.passives = S.passives || []; if (!S.passives.includes(pid) && S.passives.length < passiveSlots(S)) S.passives.push(pid); }
+        sfx.title(); flash('#300', 0.9); toast('👁 ' + T('nmFirst').replace('{n}', ROMAN(f.nmTier)).replace('{r}', msg), 7000);
+        if (sym.center && f.nmTier === 1) setTimeout(() => toast('✦ ' + T('nmSlot'), 6000), 1500);
+        const got = F.xpRate(S, true, false, false) * SANCT_XP_SEC; addXP(got); pushLB(); }
+      save(); }
     else if (f.kind === 'sanct') { const sym = SYMBOLS.find(x => x.id === f.riftI), key = f.B.id; me.x = SANCTUM.x + sym.dx*0.6; me.y = SANCTUM.y + sym.dy*0.6 + 90;
       S.sanctCD = S.sanctCD || {}; S.sanct = S.sanct || {}; S.sanctCD[key] = Date.now() + (f.result ? SANCT_CD_WIN : SANCT_CD_LOSE);
       if (f.result) { if (!S.sanct[key]) { S.sanct[key] = 1; const pct = Math.round(SANCT_BONUS[f.B.cursed ? 'cursed' : 'normal'][sym.center ? 1 : 0]*100); sfx.title(); toast('⛩ ' + T('sanctFirst').replace('{p}', pct), 6000); }
@@ -538,7 +647,7 @@
 
   // PvP protocol (v1.3: server time, persistent request card, queue while busy, 60s cooldown after refusal)
   const duels = {}; let pendingOut = null; const inbox = {}; let pendingStart = null;
-  function snap(){ const s = myStats(); return { n: S.name, t: S.t, hp: s.hp, atk: s.atk, def: s.def, crit: s.crit, sk: S.sk, as: S.as, pas: activePassives(S), shards: S.shards || 0 }; }
+  function snap(){ const s = myStats(); return { n: S.name, t: S.t, hp: s.hp, atk: s.atk, def: s.def, crit: s.crit, sk: S.sk, as: S.as, pas: activePassives(S), prank: passiveRanks(S), shards: S.shards || 0 }; }
   const pvpCDLeft = () => Math.max(0, (S.pvpCD || 0) - Date.now());
   function pvpCooldown(msg){ S.pvpCD = Date.now() + PVP_COOLDOWN; save(); if (msg) toast('⏳ ' + msg, 4000); }
   function challenge(targetId){
@@ -591,8 +700,27 @@
 
   // ---------------- Update ----------------
   let saveT = 0, lbT = 0, announcedEv = -1; const roamFx = {}; const mirrorCh = { fx: {}, seed: 9 };
+  // ---------------- v2.1 Hư Tinh Đảo ----------------
+  const onXeno = () => S.xenoOpen && xenoOn(me.x, me.y);
+  let xenoRes = 1;
+  function xenoTick(dt){
+    if (scene !== 'world' || !onXeno()) return; S.xeno = S.xeno || { lv: 0, xp: 0 };
+    let n = 0; for (const id in others) { const o = others[id]; if (xenoOn(o.x, o.y) && Math.hypot(o.x - me.x, o.y - me.y) < 600) n++; }
+    xenoRes = 1 + XENO_RATE.resPer*Math.min(XENO_RATE.resMax, n);
+    S.xeno.xp += XENO_RATE.base*(me.moving ? XENO_RATE.moving : 1)*(xenoInCrater(me.x, me.y) ? XENO_RATE.crater : 1)*xenoRes*dt;
+    let up = 0; while (S.xeno.xp >= XENO_NEED(S.xeno.lv)) { S.xeno.xp -= XENO_NEED(S.xeno.lv); S.xeno.lv++; up++; }
+    if (up) { sfx.lvl(); floaters.push({ x: me.x, y: me.y, txt: '🛸 ' + T('xenoLv').replace('{n}', S.xeno.lv), c: '#7ff8ff', life: 1.6 }); toast('🛸 ' + T('xenoUp').replace('{n}', S.xeno.lv), 3000); save(); Net.sendMe(meNet(), true); }
+  }
+  const xenoAbs = ([a, b]) => [XENO.x + a, XENO.y + b];
+  function xenoTargetIdx(where){ const xs = S.xs || 0; if (where === 'gate') return xs === 0 ? 0 : -1; if (where === 'spire') return xs >= 5 ? 5 : -2; return Math.max(1, Math.min(xs, 4)); }
+  const xenoReady = i => Date.now() >= ((S.xcd || {})[i] || 0);
+  function xenoRewardText(r){ if (r === 'open') return T('xenoOpen'); if (r === 'slot') return '✦ ' + T('xenoSlot'); if (r === 'aura') return '🎭 ' + byId(AURA_SKINS, 'xenoaura')[S.lang] + ' · ' + byId(NICKS, 'visitor')[S.lang];
+    const P = PASSIVES[r]; return P ? T('nmUnlockPas').replace('{n}', P.ico + ' ' + P[S.lang]) : ''; }
+  function startXeno(i){ const B = XENO_BOSSES[i], st = F.boss(B.ref);
+    beginBossFight({ kind: 'xeno', i, g: S.t, mechG: B.ref, B, st, form: 11, jump: 1 }); }
   function canStand(x, y){
     if (Math.abs(x) <= R.WORLD && Math.abs(y) <= R.WORLD) return true;
+    if (S.xenoOpen) { if (Math.abs(x - XENO.x) <= XENO.road && y <= -R.WORLD + 200 && y >= XENO.y + 1600) return true; if (xenoOn(x, y)) return true; } // v2.1 bridge + Xeno Isle
     if (!S.sanctOpen) return false;
     if (x >= R.WORLD - 200 && x <= SANCTUM.x && Math.abs(y - SANCTUM.y) <= SANCTUM.road) return true;
     return Math.hypot(x - SANCTUM.x, y - SANCTUM.y) <= SANCTUM.radius;
@@ -606,6 +734,7 @@
     if (me.moving) { const sp = F.speed(S.t); me.x += dx/Math.max(1, m)*sp*dt; me.y += dy/Math.max(1, m)*sp*dt; S.stats.dist = (S.stats.dist || 0) + sp*dt*Math.min(1, m); if (Math.abs(dx) > 0.1) me.face = dx > 0 ? 1 : -1; me.phase += dt*11; }
     if (!canStand(me.x, me.y)) { if (canStand(me.x, prevY)) me.y = prevY; else if (canStand(prevX, me.y)) me.x = prevX; else { me.x = prevX; me.y = prevY; } }
     if (!canStand(me.x, me.y)) { me.x = Math.max(-R.WORLD, Math.min(R.WORLD, me.x)); me.y = Math.max(-R.WORLD, Math.min(R.WORLD, me.y)); }
+    xenoTick(dt);
     gainXP(dt);
     // discoveries
     WELLS.forEach(([x, y], i) => { if (!S.wells.includes(i) && Math.hypot(me.x - x, me.y - y) < 80) { S.wells.push(i); save(); sfx.find(); toast('💧 ' + T('wellFound')); } });
@@ -620,12 +749,22 @@
     if (!S.sanctSeen && Math.hypot(me.x - SANCTUM.gate[0], me.y - SANCTUM.gate[1]) < 700) { S.sanctSeen = 1; save(); }
     if (!S.sanctOpen && S.best >= SANCTUM.unlockTitle && Math.hypot(me.x - SANCTUM.gate[0], me.y - SANCTUM.gate[1]) < 110) { S.sanctOpen = 1; save(); sfx.title(); flash('#ffe9a0', 0.8); bigBanner('⛩ ' + T('sanctum'), T('sanctRoad'), '#ffd98a'); }
     { const near = sanctCursedOpen(S) && Math.hypot(me.x - SANCTUM.x, me.y - SANCTUM.y) < 800, el = $('sanctBtn'); if (el.style.display !== (near ? 'block' : 'none')) el.style.display = near ? 'block' : 'none';
-      if (near) { const lbl = '⛩ ' + (S.sanctMode === 'cursed' ? T('sanctCursedOn') : T('sanctNormal')); if (el.textContent !== lbl) el.textContent = lbl; el.classList.toggle('red', S.sanctMode === 'cursed'); } }
+      if (near) { if (S.sanctMode === 'nightmare' && !nmOpen(S)) S.sanctMode = 'cursed'; const lbl = S.sanctMode === 'nightmare' ? '👁 ' + T('sanctNM') : '⛩ ' + (S.sanctMode === 'cursed' ? T('sanctCursedOn') : T('sanctNormal')); if (el.textContent !== lbl) el.textContent = lbl; el.classList.toggle('red', S.sanctMode !== 'normal'); } }
+    { const on = onXeno(), xl = (S.xeno || {}).lv || 0, el = $('hXeno'), show = S.xenoOpen && (on || xl > 0); if (el.style.display !== (show ? 'block' : 'none')) el.style.display = show ? 'block' : 'none';
+      if (show) { const tx = '🛸 ' + T('xenoLv').replace('{n}', xl); if ($('hXenoLv').textContent !== tx) $('hXenoLv').textContent = tx;
+        const info = on ? [xenoInCrater(me.x, me.y) ? T('xenoCrater') : '', xenoRes > 1 ? T('xenoRes').replace('{n}', xenoRes.toFixed(2)) : ''].filter(Boolean).join(' · ') : ''; if ($('hXenoInfo').textContent !== info) $('hXenoInfo').textContent = info;
+        $('xenoFill').style.width = Math.min(100, ((S.xeno || {}).xp || 0)/XENO_NEED(xl)*100) + '%'; }
+      const offMap = Math.abs(me.x) > R.WORLD || Math.abs(me.y) > R.WORLD, nearGate = S.xenoOpen && Math.hypot(me.x - XENO.gate[0], me.y - XENO.gate[1]) < 260;
+      const mode = S.xenoOpen && me.y < -R.WORLD && offMap ? 'back' : nearGate ? 'go' : '', b = $('xenoBtn');
+      if (b.style.display !== (mode ? 'block' : 'none')) b.style.display = mode ? 'block' : 'none'; if (mode) { const l = mode === 'back' ? T('xenoBack') : T('xenoGo'); if (b.textContent !== l) b.textContent = l; b.dataset.m = mode; } }
     RIFTS.forEach(([x, y], i) => { S.riftSeen = S.riftSeen || []; if (!S.riftSeen.includes(i) && Math.hypot(me.x - x, me.y - y) < 700) { S.riftSeen.push(i); save(); } });
     // others
     for (const id in others) { const o = others[id]; const ox = o.x, oy = o.y; o.x += (o.tx - o.x)*Math.min(1, dt*10); o.y += (o.ty - o.y)*Math.min(1, dt*10);
       o.moving = !!o.mv; o.face = o.f; if (o.moving) o.phase = (o.phase||0) + dt*11; }
     Net.sendMe(meNet());
+    if (S.trans && S.transRate > 0) { S.Ef = (S.Ef || 0) + S.transRate/3600*dt*(me.moving ? 1 : TRANS.stand); if (S.Ef >= 1) { const k = Math.floor(S.Ef); S.E += k; S.Ef -= k; } } // v2.2 Essence flows with aura
+    { const el = $('hTrans'), txt = S.trans ? T('transHud').replace('{x}', fmt(S.transRate*(me.moving ? 1 : TRANS.stand))) + ` · 💠 ${fmt(S.E)}` : ''; if (el.textContent !== txt) { el.textContent = txt; el.style.display = txt ? 'block' : 'none'; } }
+    { const [ax, ay] = xenoAbs(XENO_SPOTS.core), show = !S.trans && onXeno() && Math.hypot(me.x - ax, me.y - ay) < 420, b = $('transBtn'); if (b.style.display !== (show ? 'block' : 'none')) { b.style.display = show ? 'block' : 'none'; b.textContent = T('transDo'); } }
     S.playSec += dt; saveT += dt; lbT += dt;
     if (saveT > 5) { saveT = 0; save(); } if (lbT > 20) { lbT = 0; pushLB(); }
   }
@@ -653,20 +792,31 @@
         ctx.textAlign = 'center'; ctx.font = `700 ${Math.max(10, 12*cam.z)}px ${FONT}`; ctx.fillStyle = '#d9a6ff'; ctx.shadowColor = '#000'; ctx.shadowBlur = 5;
         ctx.fillText(`☠ ${S.lang === 'vi' ? r.B.vi : r.B.en}`, sx, sy - sz*1.25 - 8); ctx.shadowBlur = 0; } }); } }
     mirrorCh.t = S.t; mirrorCh.sk = S.sk; mirrorCh.as = S.as;
-    { const open = S.best >= SANCTUM.unlockTitle, road = !!S.sanctOpen, cur = sanctCursed(), [gx, gy] = SANCTUM.gate;
+    { const xo = S.xenoOpen, [gx, gy] = XENO.gate, nearIsle = vis(XENO.x, XENO.y, 3400); // v2.1 Xeno Isle
+      if (xo && nearIsle) list.push({ y: -1e9 - 3, f: () => R.xenoBackdrop(ctx, w2s, cam.z, XENO.x, XENO.y, time, W, H) });
+      if (xo && vis(XENO.x, (gy + XENO.y)/2, 3000)) list.push({ y: -1e9 - 2, f: () => R.xenoBridge(ctx, w2s, cam.z, XENO.x, -R.WORLD + 100, XENO.y + 1640, XENO.road, time) });
+      if (xo && nearIsle) list.push({ y: -1e9 - 1, f: () => R.xenoIsland(ctx, w2s, cam.z, XENO.x, XENO.y, time) });
+      if (vis(gx, gy, 500)) list.push({ y: gy, f: () => { const [sx, sy] = w2s(gx, gy), st = S.best < MAX_TITLE ? 'locked' : xo ? 'open' : 'ready';
+        R.xenoGate(ctx, sx, sy, cam.z, time, st, st === 'locked' ? '🛸 ???' : '🛸 ' + (xo ? T('xeno') : T('xenoGate') + ' · ' + XENO_BOSSES[0][S.lang] + (xenoReady(0) ? '' : ' · ' + T('sanctCD').replace('{t}', mmss(S.xcd[0] - Date.now()))))); } });
+      if (xo) for (const w of ['core', 'spire']) { const [ax, ay] = xenoAbs(XENO_SPOTS[w]); if (!vis(ax, ay, 500)) continue;
+        list.push({ y: ay, f: () => { const [sx, sy] = w2s(ax, ay), i = xenoTargetIdx(w), xs = S.xs || 0, B = i >= 0 ? XENO_BOSSES[i] : null;
+          const st = !B ? 'locked' : !xenoReady(i) ? 'cd' : xs > i ? 'done' : 'ready';
+          const sub = !B ? T('xenoSpireLocked') : st === 'cd' ? T('sanctCD').replace('{t}', mmss(S.xcd[i] - Date.now())) : `${B[S.lang]} · ${B.aff.map(id => (XAFFIXES.find(a => a.id === id) || AFFIXES.find(a => a.id === id) || {}).ico || '').join('')}${xs > i ? ' ✔' : ''}`;
+          R.xenoSpot(ctx, sx, sy, cam.z, time, w, st, '🛸 ' + T(w === 'core' ? 'xenoCore' : 'xenoSpire'), sub); } }); } }
+    { const open = S.best >= SANCTUM.unlockTitle, road = !!S.sanctOpen, cur = sanctNM() ? 2 : sanctCursed(), [gx, gy] = SANCTUM.gate;
       if (road && vis((gx + SANCTUM.x)/2, gy, 1800)) list.push({ y: -1e9, f: () => { R.sanctumRoad(ctx, w2s, cam.z, gx, SANCTUM.x - SANCTUM.radius + 60, gy, time); } });
       if (road && vis(SANCTUM.x, SANCTUM.y, 900)) list.push({ y: -1e9 + 1, f: () => { const [sx, sy] = w2s(SANCTUM.x, SANCTUM.y); R.sanctumFloor(ctx, sx, sy, cam.z, time, cur); } });
       if (vis(gx, gy, 300)) list.push({ y: gy, f: () => { const [sx, sy] = w2s(gx, gy); R.sanctumGate(ctx, sx, sy, cam.z, time, open, open ? `⛩ ${T('sanctum')}` : '⛩ ???'); } });
       for (const sym of SYMBOLS) { const x = SANCTUM.x + sym.dx, y = SANCTUM.y + sym.dy; if (!road || !vis(x, y, 300)) continue;
-        list.push({ y, f: () => { const [sx, sy] = w2s(x, y), st = sanctState(sym), B = symbolBoss(sym, cur), key = B.id;
-          const sub = st === 'locked' ? (S.best < SANCTUM.unlockTitle ? T('sanctLocked') : T('sanctDragonLocked')) : st === 'cd' ? T('sanctCD').replace('{t}', mmss(S.sanctCD[key] - Date.now())) : (B.trait ? TRAITS[B.trait].ico + ' ' + TRAITS[B.trait][S.lang] + ' · ' : '') + ['☠☠☠', '☠☠', '☠', '✓'][sanctThreat(sym)] + ' ' + T('threat')[sanctThreat(sym)];
-          R.sanctumPedestal(ctx, sx, sy, cam.z, time, sym.id, st === 'cd' && S.sanct[key] ? 'done' : st, B[S.lang], sub, cur); } }); } }
+        list.push({ y, f: () => { const [sx, sy] = w2s(x, y), st = sanctState(sym), B = sanctBossOf(sym), key = cur === 2 ? 'nm_' + sym.id : B.id, nk = nmTier(S, sym.id) + 1;
+          const sub = cur === 2 && st === 'locked' ? T('nmDragonLocked').replace('{n}', ROMAN(nk)) : st === 'locked' ? (S.best < SANCTUM.unlockTitle ? T('sanctLocked') : T('sanctDragonLocked')) : st === 'cd' ? T('sanctCD').replace('{t}', mmss(S.sanctCD[key] - Date.now())) : (cur === 2 ? '👁 ' + T('nmTier').replace('{n}', ROMAN(nk)) + ' · ' : '') + (B.trait ? TRAITS[B.trait].ico + ' ' + TRAITS[B.trait][S.lang] + ' · ' : '') + ['☠☠☠', '☠☠', '☠', '✓'][sanctThreat(sym)] + ' ' + T('threat')[sanctThreat(sym)];
+          R.sanctumPedestal(ctx, sx, sy, cam.z, time, sym.id, st === 'cd' && cur !== 2 && S.sanct[key] ? 'done' : st, B[S.lang], sub, cur); } }); } }
     if (vis(MIRROR_GATE.x, MIRROR_GATE.y, 300)) list.push({ y: MIRROR_GATE.y, f: () => { const [sx, sy] = w2s(MIRROR_GATE.x, MIRROR_GATE.y); const rd = Date.now() >= (S.mirrorCD || 0);
       R.mirrorGate(ctx, sx, sy, cam.z, time, rd, `🪞 ${T('mirrorGate')}`, rd ? T('mirrorChance').replace('{p}', Math.round(mirrorChance(S)*100)) : T('mirrorCD').replace('{t}', mmss(S.mirrorCD - Date.now())), mirrorCh); } });
     const evw = eventAt(Date.now()); if (evw.active && vis(evw.x, evw.y, 500)) list.push({ y: evw.y, f: () => { const [sx, sy] = w2s(evw.x, evw.y); R.eventGate(ctx, sx, sy, cam.z, time, evw, evw.type[S.lang], S.buffEv === evw.idx); } });
     if (vis(GATE.x, GATE.y, 500)) list.push({ y: GATE.y, f: () => { const [sx, sy] = w2s(GATE.x, GATE.y); R.gate(ctx, sx, sy, cam.z, time, capped()); } });
-    for (const id in others) { const o = others[id]; if (!vis(o.x, o.y)) continue; list.push({ y: o.y, f: () => { const [sx, sy] = w2s(o.x, o.y); R.character(ctx, sx, sy, cam.z*1.25, o, time); nameTag(sx, sy, o.n, o.t, false, o.nk); } }); }
-    list.push({ y: me.y, f: () => { const [sx, sy] = w2s(me.x, me.y); R.character(ctx, sx, sy, cam.z*1.25, Object.assign(me, { t: S.t, sk: S.sk, as: S.as }), time); nameTag(sx, sy, S.name, S.t, true, S.nk); } });
+    for (const id in others) { const o = others[id]; if (!vis(o.x, o.y)) continue; list.push({ y: o.y, f: () => { const [sx, sy] = w2s(o.x, o.y); if (o.xl) R.xenoAura(ctx, sx, sy, cam.z*1.25, o.xl, time); R.character(ctx, sx, sy, cam.z*1.25, o, time); nameTag(sx, sy, o.n, o.t, false, o.nk); } }); }
+    list.push({ y: me.y, f: () => { const [sx, sy] = w2s(me.x, me.y); if ((S.xeno || {}).lv) R.xenoAura(ctx, sx, sy, cam.z*1.25, S.xeno.lv, time); R.character(ctx, sx, sy, cam.z*1.25, Object.assign(me, { t: S.t, sk: S.sk, as: S.as }), time); nameTag(sx, sy, S.name, S.t, true, S.nk); } });
     list.sort((a, b) => a.y - b.y); list.forEach(o => o.f());
     // floaters
     floaters = floaters.filter(f => (f.life -= dt) > 0); ctx.textAlign = 'center'; ctx.font = `bold 14px ${FONT}`;
@@ -694,6 +844,7 @@
     const s = mm.width, k = s/(R.WORLD*2); mctx.fillStyle = 'rgba(8,6,12,0.85)'; mctx.fillRect(0, 0, s, s);
     const p = (x, y) => [(x + R.WORLD)*k, (y + R.WORLD)*k];
     mctx.fillStyle = '#f33'; let [x, y] = p(GATE.x, GATE.y); mctx.fillRect(x - 3, y - 3, 6, 6);
+    if (S.best >= MAX_TITLE) { const [a, b] = p(XENO.gate[0], XENO.gate[1]); mctx.fillStyle = '#40f0ff'; mctx.font = 'bold 10px serif'; mctx.textAlign = 'center'; mctx.fillText('🛸', a, b + 6); }
     S.wells.forEach(i => { const [a, b] = p(...WELLS[i]); mctx.fillStyle = '#6fe'; mctx.beginPath(); mctx.arc(a, b, 3, 0, 7); mctx.fill(); });
     S.stelae.forEach(i => { const [a, b] = p(...STELAE[i]); mctx.fillStyle = '#ca6'; mctx.fillRect(a - 1.5, b - 1.5, 3, 3); });
     if (S.sanctSeen) { const [a, b] = p(SANCTUM.gate[0], SANCTUM.gate[1]); mctx.fillStyle = sanctCursed() ? '#ff2a60' : '#ffd040'; mctx.font = 'bold 10px serif'; mctx.textAlign = 'center'; mctx.fillText('⛩', a, b + 4); }
@@ -766,24 +917,34 @@
     // numbers
     f.nums = f.nums.filter(n => (n.life -= dt) > 0); ctx.textAlign = 'center';
     for (const n of f.nums) { const x = n.side === 'R' ? rx : lx; ctx.font = `bold ${(n.crit ? 30 : 20)*Math.max(0.8, sc)}px ${FONT}`; ctx.fillStyle = n.crit ? '#ffcc33' : (n.side === 'L' ? '#ff5050' : '#fff');
-      ctx.globalAlpha = Math.min(1, n.life*2); ctx.fillText((n.crit ? '✴' : '') + fmt(n.v), x + (n.ox||0), floorY - 200*sc - (1 - n.life)*60); } ctx.globalAlpha = 1;
+      ctx.globalAlpha = Math.min(1, n.life*2); ctx.fillText(n.imm ? T('immune') : (n.crit ? '✴' : '') + fmt(n.v), x + (n.ox||0), floorY - 200*sc - (1 - n.life)*60); } ctx.globalAlpha = 1;
     // vignette + flicker for boss
     if (boss) { const vg = ctx.createRadialGradient(W*0.5, H*0.55, Math.min(W, H)*0.2, W*0.5, H*0.55, Math.max(W, H)*0.7); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.92)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
       if (Math.random() < 0.02) { ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, W, H); }
+      if (f.nmTier) { ctx.fillStyle = `rgba(70,0,12,${0.22 + Math.sin(time*0.9)*0.06})`; ctx.fillRect(0, 0, W, H); if (Math.random() < 0.012) { ctx.fillStyle = 'rgba(160,0,20,0.35)'; ctx.fillRect(0, 0, W, H); } } // v2.0 nightmare tint
       // film grain
       for (let i = 0; i < 60; i++) { ctx.fillStyle = `rgba(255,255,255,${Math.random()*0.05})`; ctx.fillRect(Math.random()*W, Math.random()*H, 2, 2); }
       if (f.phase === 'fight' && Math.floor(time*1.2) !== f._beat) { f._beat = Math.floor(time*1.2); sfx.beat(); } }
     ctx.restore();
     // v1.8 affix chips
     { const chips = []; if (f.kind !== 'pvp' && f.B && f.B.trait && TRAITS[f.B.trait]) { const TT = TRAITS[f.B.trait]; chips.push([`${TT.ico} ${TT[S.lang]}`, '#ffb020', 'rgba(50,30,0,0.8)']); }
-      (f.aff || []).forEach(id => { const A = AFFIXES.find(a => a.id === id); if (A) chips.push([`${A.ico} ${A[S.lang]}`, '#ff5060', 'rgba(40,0,10,0.75)']); });
+      (f.aff || []).forEach(id => { const A = AFFIXES.find(a => a.id === id) || XAFFIXES.find(a => a.id === id); if (A) chips.push([`${A.ico} ${A[S.lang]}`, XAFFIXES.includes(A) ? '#40f0ff' : '#ff5060', XAFFIXES.includes(A) ? 'rgba(0,25,40,0.8)' : 'rgba(40,0,10,0.75)']); });
+      if (f.ph4 !== undefined) { const X_ = XAFFIXES.find(a => a.id === XPHASES[f.ph4]); chips.push([`♻ → ${X_.ico} ${X_[S.lang]}`, '#c080ff', 'rgba(25,0,40,0.8)']); }
+      if ((f.Rt.pas || []).length) { const tw = f.tower; f.Rt.pas.forEach(id => { const P = PASSIVES[id]; if (P) chips.push([`${tw ? '😈' : '🧬'} ${P.ico} ${P[S.lang]}${tw ? ' ' + ROMAN((f.Rt.prank || {})[id] || 1) : ''}`, tw ? '#ff7040' : '#40f0ff', tw ? 'rgba(40,10,0,0.8)' : 'rgba(0,25,40,0.8)']); }); }
       if (f.mech) chips.push([`🔱 ${T('mechTransform').replace('{h}', Math.round(f.mech[0]*100)).replace('{a}', Math.round((f.mech[1] - 1)*100))}${f.mechDone ? ' ✓' : ''}`, '#c080ff', 'rgba(25,0,40,0.75)']);
+      { const lp = f.L.pas || []; ctx.textAlign = 'left'; ctx.font = `600 12px ${FONT}`; lp.forEach((id, i) => { const P = PASSIVES[id]; if (!P) return; const r = (f.L.prank || {})[id] || 1, txt = `${P.ico} ${P[S.lang]} ${ROMAN(r)}${id === 'rebirth' && f.L.fx.reborn ? ' ✓' : ''}`, w = ctx.measureText(txt).width + 16, x = 16, y = 100 + i*24;
+        ctx.fillStyle = 'rgba(0,20,30,0.75)'; ctx.fillRect(x, y - 15, w, 20); ctx.strokeStyle = '#60e0ff'; ctx.strokeRect(x, y - 15, w, 20); ctx.fillStyle = '#d8f8ff'; ctx.fillText(txt, x + 8, y); }); }
       ctx.textAlign = 'right'; ctx.font = `600 12px ${FONT}`; chips.forEach(([txt, bc, bg], i) => { const w = ctx.measureText(txt).width + 16, x = W - 16, y = 100 + i*24;
         ctx.fillStyle = bg; ctx.fillRect(x - w, y - 15, w, 20); ctx.strokeStyle = bc; ctx.strokeRect(x - w, y - 15, w, 20); ctx.fillStyle = '#ffe8d0'; ctx.fillText(txt, x - 8, y); }); }
     if (f.tower) { ctx.textAlign = 'center'; ctx.font = `900 ${Math.max(14, 18*sc)}px ${FONT}`; ctx.fillStyle = `hsl(${(260 + Math.floor((f.tower.fl - 1)/10)*37) % 360},100%,75%)`; ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
-      ctx.fillText('🗼 ' + T('towerFloor').replace('{n}', f.tower.fl), W/2, 30); ctx.shadowBlur = 0; }
-    if (f.kind === 'sanct') { ctx.textAlign = 'center'; ctx.font = `900 ${Math.max(14, 18*sc)}px ${FONT}`; ctx.fillStyle = f.B.cursed ? '#ff4a7a' : '#ffd98a'; ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
-      ctx.fillText('⛩ ' + T('sanctum') + (f.B.cursed ? ' · ' + T('sanctCursedOn') : ''), W/2, 30); ctx.shadowBlur = 0; }
+      ctx.fillText(f.tower.fl >= TOWER_NEW_FROM && f.tower.fl <= HELL_TO ? '🔥 ' + T('hellFloor').replace('{n}', f.tower.fl) : '🗼 ' + T('towerFloor').replace('{n}', f.tower.fl), W/2, 30); ctx.shadowBlur = 0;
+      if (f.tower.hell) { const gr = ctx.createLinearGradient(0, H*0.55, 0, H); gr.addColorStop(0, 'rgba(120,10,0,0)'); gr.addColorStop(1, `rgba(200,40,0,${0.35 + Math.sin(time*2)*0.08})`); ctx.fillStyle = gr; ctx.fillRect(0, H*0.55, W, H*0.45);
+        for (let i = 0; i < 24; i++) { const ph = (time*0.4 + i/24) % 1; ctx.fillStyle = `rgba(255,${120 + (i % 5)*20},40,${1 - ph})`; ctx.fillRect((i*137) % W, H - ph*H*0.6, 3, 3); } } }
+    if (f.kind === 'xeno') { ctx.textAlign = 'center'; ctx.font = `900 ${Math.max(14, 18*sc)}px ${FONT}`; ctx.fillStyle = '#7ff8ff'; ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
+      ctx.fillText('🛸 ' + T('xeno') + ' · ' + T(XENO_BOSSES[f.riftI].at === 'gate' ? 'xenoGate' : XENO_BOSSES[f.riftI].at === 'spire' ? 'xenoSpire' : 'xenoCore'), W/2, 30); ctx.shadowBlur = 0;
+      ctx.fillStyle = `rgba(0,40,60,${0.18 + Math.sin(time*0.7)*0.05})`; ctx.fillRect(0, 0, W, H); }
+    if (f.kind === 'sanct') { ctx.textAlign = 'center'; ctx.font = `900 ${Math.max(14, 18*sc)}px ${FONT}`; ctx.fillStyle = f.nmTier ? '#ff3040' : f.B.cursed ? '#ff4a7a' : '#ffd98a'; ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
+      ctx.fillText(f.nmTier ? '👁 ' + T('nmSanct') + ' · ' + T('nmTier').replace('{n}', ROMAN(f.nmTier)) : '⛩ ' + T('sanctum') + (f.B.cursed ? ' · ' + T('sanctCursedOn') : ''), W/2, 30); ctx.shadowBlur = 0; }
     // intro text
     if (f.phase === 'intro') { ctx.textAlign = 'center'; ctx.font = `italic ${Math.max(16, 22*sc)}px ${FONT}`;
       f.intro.forEach((line, i) => { const t0 = i*1.3; const vis_ = Math.max(0, Math.min(line.length, Math.floor((f.timer - t0)*28))); ctx.fillStyle = boss ? '#d8c8c8' : '#fff'; ctx.fillText(line.slice(0, vis_), W/2, H*0.18 + i*34*sc); }); }
