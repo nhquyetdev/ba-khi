@@ -430,6 +430,7 @@
       fight.intro = [T('towerFloor').replace('{n}', tw.fl)].concat(fight.intro);
       if (tw.guardian) setTimeout(() => { if (fight && fight.tower === tw) { bigBanner(T('towerGuardian'), tw.name, `hsl(${B.hue},100%,65%)`); flash('#fff', 0.5); sfx.transform(); } }, 300); }
     if (aff.includes('void')) fight.L.st = Object.assign({}, fight.L.st, { crit: 0 });
+    if (['boss', 'rift', 'roam', 'sanct'].includes(o.kind) && B.id !== 'finalmirror') fight.mech = F.transformMech(g, o.kind === 'boss' && isRealmEnd(g));
     if (o.kind === 'sanct') fight.Rt.name = S.lang === 'vi' ? B.vi : B.en;
     S.bestiary = S.bestiary || {}; const be = S.bestiary[B.id] || (S.bestiary[B.id] = { k: 0 }); be.w = o.tower ? 'tower' : o.kind === 'boss' ? (B.id === 'finalmirror' ? 'final' : 'gate') : o.kind;
     scene = 'fight'; $('hud').classList.add('dim'); $('fightUI').style.display = 'block'; sfx.beat();
@@ -458,6 +459,8 @@
         if (f.script !== undefined) { d *= f.script ? 1.3 : 0.8; if (!f.script && f.Rt.hp - d <= 0) d = Math.max(0, f.Rt.hp - 1); } f.Rt.hp -= d; f.Rt.hurt = 0.25; f.L.atk = 1;
         f.beams.push({ from: 'L', life: 0.35, crit: c }); f.nums.push({ side: 'R', v: d, crit: c, life: 1, ox: (Math.random() - 0.5)*80 }); sfx.hit();
         if (f.Rt.hp <= 0) { end(true); break; }
+        if (f.mech && !f.mechDone && f.Rt.hp < f.Rt.st.hp*0.5) { f.mechDone = true; f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + f.Rt.st.hp*f.mech[0]); f.Rt.st = Object.assign({}, f.Rt.st, { atk: f.Rt.st.atk*f.mech[1] }); f.aBoost = 1;
+          if (f.transformed) { flash('#ff4060', 0.5); sfx.transform(); bigBanner(T('awaken'), f.Rt.name, '#ff6a80'); } }
         if (f.kind !== 'pvp' && !f.transformed && f.Rt.hp < f.Rt.st.hp*0.5) { f.transformed = true; f.form = Math.min(BOSS_FORMS.length - 1, f.form + f.jump); f.aBoost = 1;
           f.Rt.name = bossName(f.B, f.form); const FF = BOSS_FORMS[f.form]; flash(`hsl(${FF.h},${FF.s}%,${FF.l}%)`, 0.7); sfx.transform();
           bigBanner(T('transform'), f.Rt.name, `hsl(${FF.h},${FF.s}%,${Math.max(60, FF.l)}%)`); }
@@ -753,6 +756,7 @@
     // v1.8 affix chips
     { const chips = []; if (f.kind !== 'pvp' && f.B && f.B.trait && TRAITS[f.B.trait]) { const TT = TRAITS[f.B.trait]; chips.push([`${TT.ico} ${TT[S.lang]}`, '#ffb020', 'rgba(50,30,0,0.8)']); }
       (f.aff || []).forEach(id => { const A = AFFIXES.find(a => a.id === id); if (A) chips.push([`${A.ico} ${A[S.lang]}`, '#ff5060', 'rgba(40,0,10,0.75)']); });
+      if (f.mech) chips.push([`🔱 ${T('mechTransform').replace('{h}', Math.round(f.mech[0]*100)).replace('{a}', Math.round((f.mech[1] - 1)*100))}${f.mechDone ? ' ✓' : ''}`, '#c080ff', 'rgba(25,0,40,0.75)']);
       ctx.textAlign = 'right'; ctx.font = `600 12px ${FONT}`; chips.forEach(([txt, bc, bg], i) => { const w = ctx.measureText(txt).width + 16, x = W - 16, y = 100 + i*24;
         ctx.fillStyle = bg; ctx.fillRect(x - w, y - 15, w, 20); ctx.strokeStyle = bc; ctx.strokeRect(x - w, y - 15, w, 20); ctx.fillStyle = '#ffe8d0'; ctx.fillText(txt, x - 8, y); }); }
     if (f.tower) { ctx.textAlign = 'center'; ctx.font = `900 ${Math.max(14, 18*sc)}px ${FONT}`; ctx.fillStyle = `hsl(${(260 + Math.floor((f.tower.fl - 1)/10)*37) % 360},100%,75%)`; ctx.shadowColor = '#000'; ctx.shadowBlur = 6;

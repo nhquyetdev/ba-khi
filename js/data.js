@@ -1,6 +1,6 @@
 // GodK Bá Khí v1.0 — data: titles, tiers, bosses, i18n, formulas
 'use strict';
-const GAME_VERSION = '2.0';
+const GAME_VERSION = '2.1';
 const FONT = "'Be Vietnam Pro', 'Segoe UI', Roboto, Arial, sans-serif";
 const SAVE_KEY = 'godk_ba_khi_save_v1';
 
@@ -128,10 +128,14 @@ const F = {
   xpRate: (s, moving, inWell, buff) => (1 + s.R) * (1 + 0.08 * s.L) * (moving ? 2 : 1) * (inWell ? 1.5 : 1) * (1 + 0.05 * (s.stelae ? s.stelae.length : 0)) * (1 + 0.01 * (s.marks || 0)) * (buff ? 5 : 1),
   statMult: (t, E, M, Sh, Sb) => F.essMult(E) * Math.pow(1.01, t) * (1 + 0.005 * (M || 0)) * (1 + 0.03 * (Sh || 0)) * (1 + (Sb || 0)),
   stats(L, t, E, M, Sh, Sb){ const m = F.statMult(t, E, M, Sh, Sb); return { hp: (120 + 30*L)*m, atk: (12 + 3.2*L)*m, def: (3 + 0.7*L)*m, crit: 0.10 + Math.min(0.15, E*0.0005) }; },
-  boss(g){ const L = LV_PER_TITLE*g; const b = F.stats(L, g, 0); const D = 0.85*Math.pow(1.017, g)*(isRealmEnd(g) ? 1.5 : 1)*(g > 250 ? 1.15 : 1)*(g === MAX_TITLE - 1 ? 1.5 : 1); // v1.5 (+v1.6 final gate ×1.5): 300 titles (~21h active, ~9 rebirths)
+  boss(g){ const L = LV_PER_TITLE*g; const b = F.stats(L, g, 0); const D = 0.85*Math.pow(1.017, g)*(isRealmEnd(g) ? 1.5 : 1)*(g > 250 ? 1.15 : 1)*(g === MAX_TITLE - 1 ? 1.5 : 1)*F.ascend(g); // v1.5 (+v1.6 final gate ×1.5): 300 titles (~21h active, ~9 rebirths)
     return { hp: b.hp*D*1.6, atk: b.atk*D*0.7, def: b.def*D, crit: 0.08 }; },
-  // v2.0: Essence now has diminishing returns (was linear 1 + 0.035·E). 540 Essence: ×19.9 → ×4.8 stats.
-  essMult: E => 1 + 0.09 * Math.pow(Math.max(0, E || 0), 0.61),
+  // v2.1: player stats are NEVER lowered — Essence is linear again (+3.5% per point). Difficulty comes from the bosses instead.
+  essMult: E => 1 + 0.035 * (E || 0),
+  // Boss Ascension: extra boss power from gate 31 on (×1.8 at 75, ×4.1 at 139, ×26 at 280…), fitted by fight simulation
+  ascend: g => g > 30 ? Math.exp(0.013 * (g - 30)) : 1,
+  // Real transformation: below 50% HP the boss heals and hits harder once (realm 2+). Realm-end gates: stronger.
+  transformMech: (g, realmEnd) => g <= 25 ? null : realmEnd ? [0.25, 1.35] : [0.15, 1.2],
   essence: t => Math.floor(Math.pow(t, 1.5) / 5), // v1.5: /5 → more rebirths
   dmg: (a, d) => a*a/(a+d),
   REBIRTH_MIN_TITLE: 25, // end of realm 1
@@ -348,7 +352,7 @@ const I18N = {
     wardrobe:'Wardrobe', tabAura:'Auras', tabNick:'Nicknames', tabSkin:'Skins', equipped:'Equipped', equip:'Equip', locked:'Locked', unlockedNew:'Unlocked: {n}!', nickname:'Nickname', skin:'Skin', auraStyle:'Aura',
     pvpCooldown:'Duel requests on cooldown: {t}', pvpSeen:'{n} received your challenge…', pvpTimeout:'No answer. You can challenge again in 1 minute.', pvpDeclinedCD:'Duel declined. You can challenge again in 1 minute.', pvpBusy:'They are busy fighting — the request will wait.',
     gateSkip:'Conquered gate — passed automatically', speed:'Speed',
-    trait:'Trait', sanctum:'Four Symbols Sanctum', sanctLocked:'Sealed — reach realm 4 to break the seal', sanctEnter:'Challenge', sanctDragonLocked:'Defeat the Four Symbols first', sanctFirst:'First clear! +{p}% all stats forever', sanctAgain:'Defeated again! +{x} aura', threat:['Deadly','Very hard','Hard','Within reach'], sanctCD:'Resting ({t})', sanctCursedOn:'Curse mode', sanctNormal:'Normal', sanctCursedLocked:'The curse awakens after GODK and the Yellow Dragon', sanctBonus:'Sanctum blessing', sanctPath:'Sanctum Path',
+    trait:'Trait', mechTransform:'Transformation: heals {h}% HP, +{a}% attack at half HP', awaken:'AWAKENING', sanctum:'Four Symbols Sanctum', sanctLocked:'Sealed — reach realm 4 to break the seal', sanctEnter:'Challenge', sanctDragonLocked:'Defeat the Four Symbols first', sanctFirst:'First clear! +{p}% all stats forever', sanctAgain:'Defeated again! +{x} aura', threat:['Deadly','Very hard','Hard','Within reach'], sanctCD:'Resting ({t})', sanctCursedOn:'Curse mode', sanctNormal:'Normal', sanctCursedLocked:'The curse awakens after GODK and the Yellow Dragon', sanctBonus:'Sanctum blessing', sanctPath:'Sanctum Path',
     towerFloor:'GodK Tower · Floor {n}', towerGuardian:'TOWER GUARDIAN', affixes:'This week', towerBest:'Tower: highest floor', towerNext:'Next floor {n}: {a}', weeklyReset:'Affixes change in {t}',
     bestiary:'Bestiary', bDiscovered:'Discovered {a} / {b}', bKills:'Defeated: {n}', bSeen:'Encountered', bWhere:'Found at', bLocked:'Not yet encountered',
     whereGate:'Dungeon Gate', whereTower:'GodK Tower', whereRift:'Rift Gate', whereRoam:'Wandering', whereMirror:'Mirror Gate', whereFinal:'Final Gate', whereSanct:'Four Symbols Sanctum',
@@ -387,7 +391,7 @@ const I18N = {
     wardrobe:'Tủ Đồ', tabAura:'Hào quang', tabNick:'Biệt hiệu', tabSkin:'Trang phục', equipped:'Đang dùng', equip:'Dùng', locked:'Chưa mở', unlockedNew:'Mở khóa: {n}!', nickname:'Biệt hiệu', skin:'Trang phục', auraStyle:'Hào quang',
     pvpCooldown:'Thách đấu đang hồi: {t}', pvpSeen:'{n} đã nhận được lời thách đấu…', pvpTimeout:'Không có phản hồi. Có thể thách đấu lại sau 1 phút.', pvpDeclinedCD:'Đối thủ từ chối. Có thể thách đấu lại sau 1 phút.', pvpBusy:'Đối thủ đang đánh boss — lời mời sẽ chờ.',
     gateSkip:'Cổng đã chinh phục — tự động vượt qua', speed:'Tốc độ',
-    trait:'Đặc tính', sanctum:'Tứ Tượng Thánh Địa', sanctLocked:'Đang phong ấn — đạt cảnh giới 4 để phá ấn', sanctEnter:'Khiêu chiến', sanctDragonLocked:'Hạ đủ Tứ Tượng trước', sanctFirst:'Lần đầu chinh phục! +{p}% mọi chỉ số vĩnh viễn', sanctAgain:'Lại chiến thắng! +{x} bá khí', threat:['Chết chắc','Rất khó','Khó','Vừa sức'], sanctCD:'Đang nghỉ ({t})', sanctCursedOn:'Chế độ Nguyền Rủa', sanctNormal:'Thường', sanctCursedLocked:'Lời nguyền thức tỉnh sau GODK và Hoàng Long', sanctBonus:'Phúc lành Thánh Địa', sanctPath:'Đường Thánh Địa',
+    trait:'Đặc tính', mechTransform:'Biến hình: còn nửa máu thì hồi {h}% máu, +{a}% công', awaken:'THỨC TỈNH', sanctum:'Tứ Tượng Thánh Địa', sanctLocked:'Đang phong ấn — đạt cảnh giới 4 để phá ấn', sanctEnter:'Khiêu chiến', sanctDragonLocked:'Hạ đủ Tứ Tượng trước', sanctFirst:'Lần đầu chinh phục! +{p}% mọi chỉ số vĩnh viễn', sanctAgain:'Lại chiến thắng! +{x} bá khí', threat:['Chết chắc','Rất khó','Khó','Vừa sức'], sanctCD:'Đang nghỉ ({t})', sanctCursedOn:'Chế độ Nguyền Rủa', sanctNormal:'Thường', sanctCursedLocked:'Lời nguyền thức tỉnh sau GODK và Hoàng Long', sanctBonus:'Phúc lành Thánh Địa', sanctPath:'Đường Thánh Địa',
     towerFloor:'Tháp GodK · Tầng {n}', towerGuardian:'HỘ VỆ THÁP', affixes:'Tuần này', towerBest:'Tháp: tầng cao nhất', towerNext:'Tầng {n}: {a}', weeklyReset:'Đổi hiệu ứng sau {t}',
     bestiary:'Bách Khoa Boss', bDiscovered:'Đã gặp {a} / {b}', bKills:'Đã hạ: {n}', bSeen:'Đã chạm trán', bWhere:'Xuất hiện ở', bLocked:'Chưa gặp',
     whereGate:'Cổng Ngục', whereTower:'Tháp GodK', whereRift:'Cổng Hoang', whereRoam:'Tà Ảnh lang thang', whereMirror:'Cổng Gương', whereFinal:'Cổng Cuối', whereSanct:'Tứ Tượng Thánh Địa',
@@ -575,7 +579,7 @@ const SYMBOLS = [ // dx, dy from sanctum center; aff = signature mechanic
 // v1.9b: FIXED strength (gate-boss equivalent title) — no longer scales with your current title, so rebirthing can't trivialise it.
 // v1.9.2: calibrated on POWER vs play time with the strongest strategy (rebirth every ~2 min), not on rebirth count:
 // Four Symbols ~12h, Yellow Dragon ~16h, cursed Symbols ~28h, cursed Dragon ~36h. Players who only rebirth when stuck: ~18h / ~29h / >45h.
-const SANCT_REF = { normal: [224, 264], cursed: [356, 382] }; // [four symbols, Yellow Dragon] — v2.0 recalibrated for the new Essence curve
+const SANCT_REF = { normal: [218, 252], cursed: [330, 346] }; // [four symbols, Yellow Dragon] — v2.1: fight-accurate sim incl. mechanics + Boss Ascension
 const SANCT_CD_WIN = 10*60*1000, SANCT_CD_LOSE = 90*1000, SANCT_XP_SEC = 150;
 const SANCT_BONUS = { normal: [0.02, 0.05], cursed: [0.04, 0.10] }; // permanent all-stat bonus on first clear (each symbol / dragon)
 const symbolBoss = (sym, cursed) => cursed ? Object.assign({}, sym, { id: sym.id + '_c', base: sym.id, cursed: 1, aff: sym.aff.concat(['void']), en: sym.en.replace(/ of the .*/, '') + ' · Cursed', vi: sym.vi + ' · Nguyền Rủa', intro: { en: ['A curse has soaked into the ' + (sym.center ? 'emperor' : 'guardian') + '.', 'Its eyes are no longer its own.'], vi: ['Lời nguyền đã ngấm vào ' + (sym.center ? 'vị hoàng đế' : 'vị thủ vệ') + '.', 'Đôi mắt ấy không còn là của nó nữa.'] } }) : sym;
