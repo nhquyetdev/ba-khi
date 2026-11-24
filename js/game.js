@@ -441,7 +441,7 @@
     fight = { kind: 'pvp', rng: mulberry(d.seed), myRole, did: d.id,
       L: { name: a.n, t: a.t, st: a, hp: a.hp, fx: {}, hurt: 0, atk: 0, sk: a.sk, as: a.as },
       Rt: { name: b.n, t: b.t, st: b, hp: b.hp, fx: {}, hurt: 0, atk: 0, sk: b.sk, as: b.as },
-      phase: 'intro', timer: 0, round: 0, beams: [], nums: [], intro: [`${a.n}  ⚔  ${b.n}`, T('fightStart') + '!'], result: null };
+      phase: 'intro', timer: 0, round: 0, beams: [], nums: [], intro: [`${a.n}  ⚔  ${b.n}`, T('fightStart') + '!'], result: null , enr: 1 };
     scene = 'fight'; $('hud').classList.add('dim'); $('fightUI').style.display = 'block'; closeModal(); sfx.beat();
   }
   function hitCalc(att, def, rng){ let d = F.dmg(att.atk, def.def) * (0.9 + rng()*0.2); const crit = rng() < att.crit; if (crit) d *= 2.5; return [d, crit]; }
@@ -465,7 +465,7 @@
           f.Rt.name = bossName(f.B, f.form); const FF = BOSS_FORMS[f.form]; flash(`hsl(${FF.h},${FF.s}%,${FF.l}%)`, 0.7); sfx.transform();
           bigBanner(T('transform'), f.Rt.name, `hsl(${FF.h},${FF.s}%,${Math.max(60, FF.l)}%)`); }
         if (AF) { if (AF.includes('enrage')) f.enr *= 1.06; if (AF.includes('regen')) f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + f.Rt.st.hp*0.03); }
-        [d, c] = hitCalc(f.Rt.st, f.L.st, f.rng); if (AF && c && AF.includes('crit')) d *= 1.2; d *= f.enr;
+        [d, c] = hitCalc(f.Rt.st, f.L.st, f.rng); if (AF && c && AF.includes('crit')) d *= 1.2; d *= (f.enr || 1);
         if (AF && AF.includes('twin') && f.round % 3 === 0) d *= 2;
         if (AF && AF.includes('leech')) f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + d*0.3);
         if (f.script !== undefined) { d *= f.script ? 0.8 : 1.3; if (f.script && f.L.hp - d <= 0) d = Math.max(0, f.L.hp - 1); } f.L.hp -= d; f.L.hurt = 0.25; f.Rt.atk = 1;
