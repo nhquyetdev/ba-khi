@@ -10,7 +10,7 @@
 
   // ---------------- Save ----------------
   const uid = () => 'p' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
-  const DEF = () => ({ v: 1, id: uid(), name: '', lang: (navigator.language||'').startsWith('vi') ? 'vi' : 'en', L: 1, xp: 0, t: 1, R: 0, E: 0, best: 1, stelae: [], wells: [], pvpW: 0, muted: false, vol: { m: 0.5, s: 0.8, a: 0.5 }, roamCD: {}, stats: {}, as: 'realm', sk: 'classic', nk: 'none', unlocks: [], pvpCD: 0, playSec: 0, marks: 0, riftCD: {}, riftSeen: [], buffUntil: 0, buffEv: -1, tv: 2, shards: 0, mirrorCD: 0, bestiary: {}, sanct: {}, sanctCD: {}, sanctMode: 'normal' });
+  const DEF = () => ({ v: 1, id: uid(), name: '', lang: (navigator.language||'').startsWith('vi') ? 'vi' : 'en', L: 1, xp: 0, t: 1, R: 0, E: 0, best: 1, stelae: [], wells: [], pvpW: 0, muted: false, vol: { m: 0.5, s: 0.8, a: 0.5 }, roamCD: {}, stats: {}, as: 'realm', sk: 'classic', nk: 'none', unlocks: [], pvpCD: 0, playSec: 0, marks: 0, riftCD: {}, riftSeen: [], buffUntil: 0, buffEv: -1, tv: 2, shards: 0, mirrorCD: 0, bestiary: {}, sanct: {}, sanctCD: {}, sanctMode: 'normal', gear: { slots: { weapon: null, armor: null, charm: null }, inv: [] }, passives: [] }); // v1.11: gear/passives reserved (features off)
   let S;
   function migrate(o){ // v1.5 inserted 50 titles: convert old title numbers (saves without tv:2)
     if (o && !o.tv) { if (typeof o.t === 'number') o.t = OT(o.t); if (typeof o.best === 'number') o.best = OT(o.best); o.tv = 2; } return o; }
@@ -78,7 +78,8 @@
   function toast(msg, ms=2600){ const d = document.createElement('div'); d.className = 'toast'; d.innerHTML = msg; $('toasts').appendChild(d); setTimeout(()=>d.classList.add('out'), ms); setTimeout(()=>d.remove(), ms + 600); }
   function titleCss(t){ const A = R.auraStyle(t); return A.rainbow ? 'rainbow' : ''; }
   function titleColor(t){ const A = R.auraStyle(t); if (A.void) return `hsl(${A.oh},100%,72%)`; return `hsl(${A.h},${Math.max(40, A.s)}%,${Math.min(80, Math.max(60, A.l))}%)`; }
-  const myStats = () => F.stats(S.L, S.t, S.E, S.marks, S.shards, sanctBonus(S));
+  const myStats = () => { const s = F.stats(S.L, S.t, S.E, S.marks, S.shards, sanctBonus(S)); if (!FEATURE_GEAR) return s;
+    const g = gearMult(S); return { hp: s.hp*g.hp, atk: s.atk*g.atk, def: s.def*g.def, crit: s.crit + g.crit }; }; // v1.11 gear hook (off)
   const buffOn = () => Date.now() < (S.buffUntil || 0);
   const capped = () => S.L >= F.levelCap(S.t);
   const inWell = () => WELLS.some(([x, y]) => Math.hypot(me.x - x, me.y - y) < 70);
@@ -211,7 +212,7 @@
       ${S.R ? `<tr><td>✦ ${T('rebirths')}</td><td>${S.R}</td></tr><tr><td>💠 ${T('essence')}</td><td>${S.E}</td></tr><tr><td>💠 ${T('essBonus')}</td><td>×${F.essMult(S.E).toFixed(2)}</td></tr>` : ''}
       <tr><td>📈 ${T('xpBonus')}</td><td>×${((1 + S.R)*(1 + 0.05*S.stelae.length)*(1 + 0.01*(S.marks||0))).toFixed(2)}</td></tr>
       ${S.stelae.length ? `<tr><td>🗿 ${T('stelae')}</td><td>${S.stelae.length} / ${STELAE.length}</td></tr>` : ''}
-      ${S.marks ? `<tr><td>⛩ ${T('marks')}</td><td>${S.marks} / ${MAX_MARKS}</td></tr>` : ''}${S.shards ? `<tr><td>🪞 ${T('shards')}</td><td>${S.shards} / ${MAX_SHARDS}</td></tr>` : ''}${sanctBonus(S) ? `<tr><td>⛩ ${T('sanctBonus')}</td><td>+${Math.round(sanctBonus(S)*100)}%</td></tr>` : ''}${S.best > MAX_TITLE ? `<tr><td>🗼 ${T('towerBest')}</td><td>${S.best - MAX_TITLE}</td></tr>` : ''}<tr><td>⚔ ${T('pvpWins')}</td><td>${S.pvpW}</td></tr></table>${S.marks ? `<p class="muted small">⛩ ${T('markEffect')}</p>` : ''}
+      ${S.marks ? `<tr><td>⛩ ${T('marks')}</td><td>${S.marks} / ${MAX_MARKS}</td></tr>` : ''}${S.shards ? `<tr><td>🪞 ${T('shards')}</td><td>${S.shards} / ${MAX_SHARDS} (+${Math.round(S.shards*SHARD_BONUS*100)}%)</td></tr>` : ''}${sanctBonus(S) ? `<tr><td>⛩ ${T('sanctBonus')}</td><td>+${Math.round(sanctBonus(S)*100)}%</td></tr>` : ''}${S.best > MAX_TITLE ? `<tr><td>🗼 ${T('towerBest')}</td><td>${S.best - MAX_TITLE}</td></tr>` : ''}<tr><td>⚔ ${T('pvpWins')}</td><td>${S.pvpW}</td></tr></table>${S.marks ? `<p class="muted small">⛩ ${T('markEffect')}</p>` : ''}
       ${S.stelae.length ? `<div class="lore">${S.stelae.map(i => `<p>🗿 ${esc(STELAE_LORE[i][S.lang])}</p>`).join('')}</div>` : ''}
       <div class="row"><button class="btn" data-close>${T('close')}</button></div>`);
   }
@@ -335,17 +336,31 @@
 
   // ---------------- Progress ----------------
   function gainXP(dt){
-    if (capped()) { S.xp = 0; if (scene === 'world') tryAutoBreak(); return; }
-    S.xp += F.xpRate(S, me.moving, inWell(), buffOn()) * dt;
-    let lv = false;
-    while (!capped() && S.xp >= F.xpNeed(S.L)) { S.xp -= F.xpNeed(S.L); S.L++; lv = true; }
+    if (capped() && S.t >= S.best) { S.xp = 0; return; }
+    if (capped()) { if (scene === 'world') tryAutoBreak(); return; }
+    const L0 = S.L; addXP(F.xpRate(S, me.moving, inWell(), buffOn()) * dt, scene === 'world');
+    if (S.L !== L0) { sfx.lvl(); floaters.push({ x: me.x, y: me.y, txt: `${T('level')} ${S.L}`, c: '#9ff', life: 1.2 });
+      if (capped() && S.t >= S.best) toast('⚠ ' + T('capReached')); }
+  }
+  // v2.2: every source of aura (moving, rifts, roamers, sanctum…) flows through here. Hitting the level cap of a gate you
+  // have ALREADY conquered no longer wastes the rest: the gate shatters on the spot and the aura keeps flowing into the next title.
+  function addXP(xp, autoTitle = true){
+    const t0 = S.t; let ups = 0;
+    while (xp > 0) {
+      if (capped()) { if (autoTitle && S.t < S.best) { S.t++; continue; } S.xp = 0; break; }
+      const need = F.xpNeed(S.L) - S.xp; if (xp >= need) { xp -= need; S.xp = 0; S.L++; ups++; } else { S.xp += xp; xp = 0; }
+    }
+    if (autoTitle && capped() && S.t < S.best) S.t++;
     if (capped()) S.xp = 0;
-    if (lv) { sfx.lvl(); floaters.push({ x: me.x, y: me.y, txt: `${T('level')} ${S.L}`, c: '#9ff', life: 1.2 });
-      if (capped()) { toast('⚠ ' + T('capReached')); tryAutoBreak(); } }
+    if (S.t !== t0) { if (Date.now() - skipToastT > 4000) { skipToastT = Date.now(); toast('💥 ' + T('gateSkip') + (S.t - t0 > 1 ? ` ×${S.t - t0}` : '')); } titleFx(t0, false); }
+    return ups;
   }
   function titleUp(fromGate){
-    const oldTier = tierOf(S.t); S.t += 1; if (S.t > S.best) { const first = S.t > MAX_TITLE && S.best <= MAX_TITLE; S.best = S.t; if (first) setTimeout(()=>toast('∞ ' + T('beyondUnlocked'), 6000), 2500); }
-    S.xp = 0; save(); pushLB(); sfx.title(); flash(titleColor(S.t), tierOf(S.t) !== oldTier ? 1 : (fromGate ? 0.5 : 0.2));
+    const t0 = S.t; S.t += 1; if (S.t > S.best) { const first = S.t > MAX_TITLE && S.best <= MAX_TITLE; S.best = S.t; if (first) setTimeout(()=>toast('∞ ' + T('beyondUnlocked'), 6000), 2500); }
+    S.xp = 0; titleFx(t0, fromGate);
+  }
+  function titleFx(t0, fromGate){ const oldTier = tierOf(t0);
+    save(); pushLB(); sfx.title(); flash(titleColor(S.t), tierOf(S.t) !== oldTier ? 1 : (fromGate ? 0.5 : 0.2));
     bigBanner(tierOf(S.t) !== oldTier ? `${T('newTitle')} · ${tierName(S.t, S.lang)}` : T('newTitle'), tn(S.t), titleColor(S.t), titleCss(S.t));
     refreshHUD(true); Net.sendMe(meNet(), true);
   }
@@ -407,7 +422,7 @@
     const m = (p.hp / F.dmg(b.atk, p.def)) / (b.hp / (F.dmg(p.atk, b.def)*1.15)); return m < 0.4 ? 0 : m < 0.75 ? 1 : m < 1.1 ? 2 : 3; }
   function startSanct(sym){
     const cur = sanctCursed(), B = symbolBoss(sym, cur), st = F.boss(SANCT_REF[cur ? 'cursed' : 'normal'][sym.center ? 1 : 0]);
-    beginBossFight({ kind: 'sanct', i: sym.id, g: S.t, B, st, form: cur ? 11 : (sym.center ? 10 : 9), jump: 1 });
+    beginBossFight({ kind: 'sanct', i: sym.id, g: S.t, mechG: SANCT_REF[cur ? 'cursed' : 'normal'][sym.center ? 1 : 0], B, st, form: cur ? 11 : (sym.center ? 10 : 9), jump: 1 });
   }
   function startMirror(){
     const p = myStats(); const st = { hp: p.hp*MIRROR_MULT, atk: p.atk*MIRROR_MULT, def: p.def*MIRROR_MULT, crit: p.crit };
@@ -422,7 +437,7 @@
     if (o.tower) o.tower.aff = aff;
     const hue = (B.hue + posOf(g)*6) % 360;
     fight = { kind: o.kind, riftI: o.i, g, B, rng: Math.random, hue, form: o.form, jump: o.jump, aBoost: 0, transformed: o.kind === 'mirror' || B.id === 'finalmirror', script: o.script, memPhase: -1,
-      L: { name: S.name, t: S.t, st: myStats(), hp: 0, fx: {}, hurt: 0, atk: 0, sk: S.sk, as: S.as },
+      L: { name: S.name, t: S.t, st: myStats(), hp: 0, fx: {}, hurt: 0, atk: 0, sk: S.sk, as: S.as, pas: activePassives(S), shards: S.shards || 0 },
       Rt: { name: o.kind === 'mirror' || B.id === 'finalmirror' ? (S.lang === 'vi' ? B.vi : B.en) : bossName(B, o.form), st, hp: 0, hurt: 0, atk: 0, fx: {} },
       phase: 'intro', timer: 0, round: 0, beams: [], nums: [], intro: B.intro[S.lang], result: null, tower: o.tower || null, aff: aff.length ? aff : null, enr: 1 };
     fight.L.hp = fight.L.st.hp; fight.Rt.hp = st.hp;
@@ -430,7 +445,7 @@
       fight.intro = [T('towerFloor').replace('{n}', tw.fl)].concat(fight.intro);
       if (tw.guardian) setTimeout(() => { if (fight && fight.tower === tw) { bigBanner(T('towerGuardian'), tw.name, `hsl(${B.hue},100%,65%)`); flash('#fff', 0.5); sfx.transform(); } }, 300); }
     if (aff.includes('void')) fight.L.st = Object.assign({}, fight.L.st, { crit: 0 });
-    if (['boss', 'rift', 'roam', 'sanct'].includes(o.kind) && B.id !== 'finalmirror') fight.mech = F.transformMech(g, o.kind === 'boss' && isRealmEnd(g));
+    if (['boss', 'rift', 'roam', 'sanct'].includes(o.kind) && B.id !== 'finalmirror') fight.mech = F.transformMech(o.mechG || g, o.kind === 'boss' && isRealmEnd(g));
     if (o.kind === 'sanct') fight.Rt.name = S.lang === 'vi' ? B.vi : B.en;
     S.bestiary = S.bestiary || {}; const be = S.bestiary[B.id] || (S.bestiary[B.id] = { k: 0 }); be.w = o.tower ? 'tower' : o.kind === 'boss' ? (B.id === 'finalmirror' ? 'final' : 'gate') : o.kind;
     scene = 'fight'; $('hud').classList.add('dim'); $('fightUI').style.display = 'block'; sfx.beat();
@@ -439,11 +454,16 @@
   function startPvP(d, myRole){
     const a = d.sa, b = d.sb;
     fight = { kind: 'pvp', rng: mulberry(d.seed), myRole, did: d.id,
-      L: { name: a.n, t: a.t, st: a, hp: a.hp, fx: {}, hurt: 0, atk: 0, sk: a.sk, as: a.as },
-      Rt: { name: b.n, t: b.t, st: b, hp: b.hp, fx: {}, hurt: 0, atk: 0, sk: b.sk, as: b.as },
+      L: { name: a.n, t: a.t, st: a, hp: a.hp, fx: {}, hurt: 0, atk: 0, sk: a.sk, as: a.as, pas: a.pas || [], shards: a.shards || 0 },
+      Rt: { name: b.n, t: b.t, st: b, hp: b.hp, fx: {}, hurt: 0, atk: 0, sk: b.sk, as: b.as, pas: b.pas || [], shards: b.shards || 0 },
       phase: 'intro', timer: 0, round: 0, beams: [], nums: [], intro: [`${a.n}  ⚔  ${b.n}`, T('fightStart') + '!'], result: null , enr: 1 };
     scene = 'fight'; $('hud').classList.add('dim'); $('fightUI').style.display = 'block'; closeModal(); sfx.beat();
   }
+  // v1.11: passive hooks for either side (no-op while FEATURE_PASSIVES is off: side.pas is empty)
+  function pas(f, me, foe, hook, d){ if (!me.pas || !me.pas.length) return d; const c = { f, me, foe };
+    for (const id of me.pas) { const P = PASSIVES[id]; if (!P || !P[hook]) continue; if (hook === 'onDeath') { if (P.onDeath(c)) return true; } else if (hook === 'onTurn') P.onTurn(c); else d = P[hook](c, d); }
+    return hook === 'onDeath' ? false : d; }
+  const dead = (f, me, foe) => me.hp <= 0 && !pas(f, me, foe, 'onDeath');
   function hitCalc(att, def, rng){ let d = F.dmg(att.atk, def.def) * (0.9 + rng()*0.2); const crit = rng() < att.crit; if (crit) d *= 2.5; return [d, crit]; }
   function fightStep(dt){
     const f = fight; f.timer += dt; f.L.hurt = Math.max(0, f.L.hurt - dt); f.Rt.hurt = Math.max(0, f.Rt.hurt - dt); f.L.atk = Math.max(0, f.L.atk - dt*2); f.Rt.atk = Math.max(0, f.Rt.atk - dt*2);
@@ -454,11 +474,11 @@
         f.timer -= tick; f.round++;
         // left attacks
         const AF = f.aff;
-        let [d, c] = hitCalc(f.L.st, f.Rt.st, f.rng); if (AF && AF.includes('shield') && f.Rt.hp > f.Rt.st.hp*0.5) d *= 0.5;
-        if (AF && AF.includes('thorns')) { f.L.hp -= d*0.2; if (f.L.hp <= 0) { f.L.hp = 0; end(false); break; } }
+        let [d, c] = hitCalc(f.L.st, f.Rt.st, f.rng); d = pas(f, f.Rt, f.L, 'onTake', pas(f, f.L, f.Rt, 'onDeal', d)); if (AF && AF.includes('shield') && f.Rt.hp > f.Rt.st.hp*0.5) d *= 0.5;
+        if (AF && AF.includes('thorns')) { f.L.hp -= d*0.2; if (dead(f, f.L, f.Rt)) { f.L.hp = 0; end(false); break; } }
         if (f.script !== undefined) { d *= f.script ? 1.3 : 0.8; if (!f.script && f.Rt.hp - d <= 0) d = Math.max(0, f.Rt.hp - 1); } f.Rt.hp -= d; f.Rt.hurt = 0.25; f.L.atk = 1;
         f.beams.push({ from: 'L', life: 0.35, crit: c }); f.nums.push({ side: 'R', v: d, crit: c, life: 1, ox: (Math.random() - 0.5)*80 }); sfx.hit();
-        if (f.Rt.hp <= 0) { end(true); break; }
+        if (dead(f, f.Rt, f.L)) { end(true); break; }
         if (f.mech && !f.mechDone && f.Rt.hp < f.Rt.st.hp*0.5) { f.mechDone = true; f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + f.Rt.st.hp*f.mech[0]); f.Rt.st = Object.assign({}, f.Rt.st, { atk: f.Rt.st.atk*f.mech[1] }); f.aBoost = 1;
           if (f.transformed) { flash('#ff4060', 0.5); sfx.transform(); bigBanner(T('awaken'), f.Rt.name, '#ff6a80'); } }
         if (f.kind !== 'pvp' && !f.transformed && f.Rt.hp < f.Rt.st.hp*0.5) { f.transformed = true; f.form = Math.min(BOSS_FORMS.length - 1, f.form + f.jump); f.aBoost = 1;
@@ -467,11 +487,14 @@
         if (AF) { if (AF.includes('enrage')) f.enr *= 1.06; if (AF.includes('regen')) f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + f.Rt.st.hp*0.03); }
         [d, c] = hitCalc(f.Rt.st, f.L.st, f.rng); if (AF && c && AF.includes('crit')) d *= 1.2; d *= (f.enr || 1);
         if (AF && AF.includes('twin') && f.round % 3 === 0) d *= 2;
+        d = pas(f, f.L, f.Rt, 'onTake', pas(f, f.Rt, f.L, 'onDeal', d));
         if (AF && AF.includes('leech')) f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + d*0.3);
         if (f.script !== undefined) { d *= f.script ? 0.8 : 1.3; if (f.script && f.L.hp - d <= 0) d = Math.max(0, f.L.hp - 1); } f.L.hp -= d; f.L.hurt = 0.25; f.Rt.atk = 1;
         f.beams.push({ from: 'R', life: 0.35, crit: c }); f.nums.push({ side: 'L', v: d, crit: c, life: 1, ox: (Math.random() - 0.5)*80 });
         if (f.kind !== 'pvp' && c) flash('#300', 0.6); if (f.tower) f.shake = Math.min(14, 3 + f.tower.fl/8);
-        if (f.L.hp <= 0) { end(false); break; }
+        if (dead(f, f.L, f.Rt)) { end(false); break; }
+        if (f.Rt.hp <= 0 && dead(f, f.Rt, f.L)) { end(true); break; } // reflect damage
+        pas(f, f.L, f.Rt, 'onTurn'); pas(f, f.Rt, f.L, 'onTurn');
         if (f.round >= 70) { end(f.script !== undefined ? f.script : f.kind === 'pvp' ? (f.L.hp/f.L.st.hp >= f.Rt.hp/f.Rt.st.hp) : false); break; }
       }
       return;
@@ -492,23 +515,21 @@
     else if (f.kind === 'sanct') { const sym = SYMBOLS.find(x => x.id === f.riftI), key = f.B.id; me.x = SANCTUM.x + sym.dx*0.6; me.y = SANCTUM.y + sym.dy*0.6 + 90;
       S.sanctCD = S.sanctCD || {}; S.sanct = S.sanct || {}; S.sanctCD[key] = Date.now() + (f.result ? SANCT_CD_WIN : SANCT_CD_LOSE);
       if (f.result) { if (!S.sanct[key]) { S.sanct[key] = 1; const pct = Math.round(SANCT_BONUS[f.B.cursed ? 'cursed' : 'normal'][sym.center ? 1 : 0]*100); sfx.title(); toast('⛩ ' + T('sanctFirst').replace('{p}', pct), 6000); }
-        else { let xp = F.xpRate(S, true, false, false) * SANCT_XP_SEC; const got = xp; while (!capped() && xp > 0) { const need = F.xpNeed(S.L) - S.xp; if (xp >= need) { xp -= need; S.xp = 0; S.L++; } else { S.xp += xp; xp = 0; } } if (capped()) S.xp = 0; toast('⛩ ' + T('sanctAgain').replace('{x}', fmt(got)), 4500); }
+        else { const got = F.xpRate(S, true, false, false) * SANCT_XP_SEC; addXP(got); toast('⛩ ' + T('sanctAgain').replace('{x}', fmt(got)), 4500); }
         pushLB(); }
       save(); }
     else if (f.kind === 'mirror') { me.x = MIRROR_GATE.x; me.y = MIRROR_GATE.y + 150; S.mirrorCD = Date.now() + (f.result ? MIRROR_CD_WIN : MIRROR_CD_LOSE);
-      if (f.result) { S.stats.mirrorWins = (S.stats.mirrorWins || 0) + 1; const got = (S.shards||0) < MAX_SHARDS; if (got) S.shards = (S.shards||0) + 1; toast('🪞 ' + (got ? T('mirrorWin') : T('mirrorWinMax')), 5000); pushLB(); }
+      if (f.result) { S.stats.mirrorWins = (S.stats.mirrorWins || 0) + 1; const got = (S.shards||0) < MAX_SHARDS; if (got) S.shards = (S.shards||0) + 1; toast('🪞 ' + (got ? T('mirrorWin').replace('{p}', Math.round(SHARD_BONUS*100)) : T('mirrorWinMax')), 5000); pushLB(); }
       save(); }
     else if (f.kind === 'roam') { S.roamCD = S.roamCD || {}; S.roamCD[f.riftI] = Date.now() + (f.result ? ROAM_CD : RIFT_CD_LOSE); me.y += 120;
-      if (f.result) { S.stats.roamWins = (S.stats.roamWins || 0) + 1; let xp = F.xpRate(S, true, false, false) * ROAM_XP_SEC; const got = xp;
-        while (!capped() && xp > 0) { const need = F.xpNeed(S.L) - S.xp; if (xp >= need) { xp -= need; S.xp = 0; S.L++; } else { S.xp += xp; xp = 0; } }
-        if (capped()) S.xp = 0; const mark = Math.random() < 0.25 && (S.marks||0) < MAX_MARKS; if (mark) S.marks = (S.marks||0) + 1;
+      if (f.result) { S.stats.roamWins = (S.stats.roamWins || 0) + 1; const got = F.xpRate(S, true, false, false) * ROAM_XP_SEC; addXP(got);
+        const mark = Math.random() < 0.25 && (S.marks||0) < MAX_MARKS; if (mark) S.marks = (S.marks||0) + 1;
         toast('☠ ' + (mark ? T('roamWinMark') : T('roamWin')).replace('{x}', fmt(got)), 4500); sfx.lvl(); pushLB(); }
       save(); }
     else if (f.kind === 'rift') { const [rx, ry, rk] = RIFTS[f.riftI]; me.x = rx; me.y = ry + 160; S.riftCD = S.riftCD || {};
       S.riftCD[f.riftI] = Date.now() + (f.result ? RIFT_CD_WIN : RIFT_CD_LOSE);
-      if (f.result) { S.stats.riftWins = (S.stats.riftWins || 0) + 1; const RK = RIFT_RANKS[rk]; let xp = F.xpRate(S, true, false, false) * RK.xpSec; const got = xp; let ups = 0;
-        while (!capped() && xp > 0) { const need = F.xpNeed(S.L) - S.xp; if (xp >= need) { xp -= need; S.xp = 0; S.L++; ups++; } else { S.xp += xp; xp = 0; } }
-        if (capped()) S.xp = 0; const markGot = (S.marks||0) < MAX_MARKS; if (markGot) S.marks = (S.marks||0) + 1;
+      if (f.result) { S.stats.riftWins = (S.stats.riftWins || 0) + 1; const RK = RIFT_RANKS[rk]; const got = F.xpRate(S, true, false, false) * RK.xpSec; const ups = addXP(got);
+        const markGot = (S.marks||0) < MAX_MARKS; if (markGot) S.marks = (S.marks||0) + 1;
         toast('⛩ ' + (markGot ? T('riftWin') : T('riftMaxMarks')).replace('{x}', fmt(got)), 4500); if (ups) sfx.lvl(); pushLB(); }
       save(); }
     else if (f.myRole === 'a') setTimeout(() => Net.duelRemove(f.did), 3000);
@@ -517,7 +538,7 @@
 
   // PvP protocol (v1.3: server time, persistent request card, queue while busy, 60s cooldown after refusal)
   const duels = {}; let pendingOut = null; const inbox = {}; let pendingStart = null;
-  function snap(){ const s = myStats(); return { n: S.name, t: S.t, hp: s.hp, atk: s.atk, def: s.def, crit: s.crit, sk: S.sk, as: S.as }; }
+  function snap(){ const s = myStats(); return { n: S.name, t: S.t, hp: s.hp, atk: s.atk, def: s.def, crit: s.crit, sk: S.sk, as: S.as, pas: activePassives(S), shards: S.shards || 0 }; }
   const pvpCDLeft = () => Math.max(0, (S.pvpCD || 0) - Date.now());
   function pvpCooldown(msg){ S.pvpCD = Date.now() + PVP_COOLDOWN; save(); if (msg) toast('⏳ ' + msg, 4000); }
   function challenge(targetId){

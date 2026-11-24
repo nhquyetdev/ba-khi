@@ -1,6 +1,7 @@
 // GodK Bá Khí v1.0 — data: titles, tiers, bosses, i18n, formulas
 'use strict';
-const GAME_VERSION = '2.1.1';
+const GAME_VERSION = '1.11.1';
+const HARD_FROM = 200, ASCEND_K = 0.035, R1_END = 25, R1_HP = 0.96; // v1.11: gates 1–200 = original difficulty; Boss Ascension + Transformation only from gate 201
 const FONT = "'Be Vietnam Pro', 'Segoe UI', Roboto, Arial, sans-serif";
 const SAVE_KEY = 'godk_ba_khi_save_v1';
 
@@ -126,16 +127,18 @@ const F = {
   levelCap: t => LV_PER_TITLE * t,
   xpNeed: L => Math.floor(4 * Math.pow(L, 1.3) + 12), // v1.1: ×2 to offset events/rifts
   xpRate: (s, moving, inWell, buff) => (1 + s.R) * (1 + 0.08 * s.L) * (moving ? 2 : 1) * (inWell ? 1.5 : 1) * (1 + 0.05 * (s.stelae ? s.stelae.length : 0)) * (1 + 0.01 * (s.marks || 0)) * (buff ? 5 : 1),
-  statMult: (t, E, M, Sh, Sb) => F.essMult(E) * Math.pow(1.01, t) * (1 + 0.005 * (M || 0)) * (1 + 0.03 * (Sh || 0)) * (1 + (Sb || 0)),
+  statMult: (t, E, M, Sh, Sb) => F.essMult(E) * Math.pow(1.01, t) * (1 + 0.005 * (M || 0)) * (1 + SHARD_BONUS * (Sh || 0)) * (1 + (Sb || 0)),
   stats(L, t, E, M, Sh, Sb){ const m = F.statMult(t, E, M, Sh, Sb); return { hp: (120 + 30*L)*m, atk: (12 + 3.2*L)*m, def: (3 + 0.7*L)*m, crit: 0.10 + Math.min(0.15, E*0.0005) }; },
-  boss(g){ const L = LV_PER_TITLE*g; const b = F.stats(L, g, 0); const D = 0.85*Math.pow(1.017, g)*(isRealmEnd(g) ? 1.5 : 1)*(g > 250 ? 1.15 : 1)*(g === MAX_TITLE - 1 ? 1.5 : 1)*F.ascend(g); // v1.5 (+v1.6 final gate ×1.5): 300 titles (~21h active, ~9 rebirths)
-    return { hp: b.hp*D*1.6, atk: b.atk*D*0.7, def: b.def*D, crit: 0.08 }; },
+  boss(g){ const L = LV_PER_TITLE*g; const b = F.stats(L, g, 0); const D = 0.85*Math.pow(1.017, g)*(isRealmEnd(g) && g > R1_END ? 1.5 : 1)*(g > 250 ? 1.15 : 1)*(g === MAX_TITLE - 1 ? 1.5 : 1)*F.ascend(g); // v1.5 (+v1.6 final gate ×1.5): 300 titles (~21h active, ~9 rebirths)
+    return { hp: b.hp*D*1.6*F.r1hp(g), atk: b.atk*D*0.7, def: b.def*D, crit: 0.08 }; },
+  // v1.11.1: realm 1 (before rebirth unlocks) — boss HP −4% per gate from gate 11 and no realm-end ×1.5 at gate 25 → ~50% win with 0 Essence, 0 Marks
+  r1hp: g => g > 10 && g <= R1_END ? Math.pow(R1_HP, g - 10) : 1,
   // v2.1: player stats are NEVER lowered — Essence is linear again (+3.5% per point). Difficulty comes from the bosses instead.
   essMult: E => 1 + 0.035 * (E || 0),
-  // Boss Ascension: extra boss power from gate 31 on (×1.8 at 75, ×4.1 at 139, ×26 at 280…), fitted by fight simulation
-  ascend: g => g > 30 ? Math.exp(0.013 * (g - 30)) : 1,
-  // Real transformation: below 50% HP the boss heals and hits harder once (realm 2+). Realm-end gates: stronger.
-  transformMech: (g, realmEnd) => g <= 25 ? null : realmEnd ? [0.25, 1.35] : [0.15, 1.2],
+  // Boss Ascension (v1.11): none up to gate 200 (original difficulty), then e^(0.035·(g−200)) — fitted by fight simulation
+  ascend: g => g > HARD_FROM ? Math.exp(ASCEND_K * (g - HARD_FROM)) : 1, // ×1 ≤200, ×5.8 @250, ×33 @300 (same as before at the Tower)
+  // Real transformation: below 50% HP the boss heals and hits harder once (gate 201+ only). Realm-end gates: stronger.
+  transformMech: (g, realmEnd) => g <= HARD_FROM ? null : realmEnd ? [0.25, 1.35] : [0.15, 1.2],
   essence: t => Math.floor(Math.pow(t, 1.5) / 5), // v1.5: /5 → more rebirths
   dmg: (a, d) => a*a/(a+d),
   REBIRTH_MIN_TITLE: 25, // end of realm 1
@@ -223,7 +226,7 @@ const HIGH_BOSSES = [
 // v1.5 — the Mirror Gate: a copy of YOU, slightly stronger. Winning is pure luck (20%).
 const MIRROR_BOSS = { id:'mirrorself', en:'Your Reflection', vi:'Bóng Gương Của Ngươi', hue: 350, intro:{en:['It knows every move you will make.','It is you. Slightly better. Only luck can save you.'],vi:['Nó biết trước mọi đòn ngươi sẽ ra.','Nó chính là ngươi, chỉ nhỉnh hơn một chút. Chỉ may mắn mới cứu được ngươi.']}};
 // v1.6: harder — 12% base, −0.8% per Mirror Shard you own (it copies them too), min 4%; reflection ×1.05; longer cooldowns
-const MIRROR_GATE = { x: -650, y: 1150 }, MIRROR_MULT = 1.05, MIRROR_CD_WIN = 15*60*1000, MIRROR_CD_LOSE = 3*60*1000, MAX_SHARDS = 10;
+const MIRROR_GATE = { x: -650, y: 1150 }, MIRROR_MULT = 1.05, MIRROR_CD_WIN = 15*60*1000, MIRROR_CD_LOSE = 3*60*1000, MAX_SHARDS = 10, SHARD_BONUS = 0.06; // v2.2: +6% per shard (was 3%)
 const mirrorChance = S => Math.max(0.04, 0.12 - 0.008*(S.shards || 0));
 // v1.6 FINAL BOSS (gate 299 → GODK): your last reflection; replays every realm you walked through as it loses HP. Pure stat check (no luck).
 const FINAL_MIRROR = { id:'finalmirror', en:'The Last Reflection', vi:'Bóng Gương Tối Hậu', hue: 0, intro:{en:['Three hundred titles. One mirror.','It remembers every step you took.'],vi:['Ba trăm danh hiệu. Một tấm gương.','Nó nhớ từng bước ngươi đã đi.']}};
@@ -263,7 +266,7 @@ function bossFor(g){
   if (g === 1) return BOSSES[0]; // the first gate is always The Hollow
   const pool = [BOSSES[ti]]; for (let k = 0; k < 6; k++) pool.push(EXTRA_BOSSES[(ti*6 + k) % n]);
   if (ti > 0) pool.push(BOSSES[ti - 1]);
-  pool.push(TRAIT_BOSSES[ti % 3]); if (ti >= 3) pool.push(ARCHANGELS[ti % 2]); // v1.9
+  pool.push(ti > 0 ? TRAIT_BOSSES[ti % 3] : EXTRA_BOSSES[6 % n]); if (ti >= 3) pool.push(ARCHANGELS[ti % 2]); // v1.9 · v1.11.1: realm 1 gets a plain boss instead of a trait boss (pool stays 8 so stride 7 still cycles)
   return pool[(g*7) % pool.length]; // stride coprime with pool size so every boss appears
 }
 function bossForm(g){ if (g >= MAX_TITLE) return towerForm(towerFloor(g)); const ti = tierOf(g); if (g === MAX_TITLE - 1) return BOSS_FORMS.length - 1; if (ti >= 10) return Math.min(BOSS_FORMS.length - 2, 9 + Math.min(3, ti - 10)); return Math.min(8, Math.floor(ti*0.8 + ((subOf(g) - 1)/7))); }
@@ -358,7 +361,7 @@ const I18N = {
     whereGate:'Dungeon Gate', whereTower:'GodK Tower', whereRift:'Rift Gate', whereRoam:'Wandering', whereMirror:'Mirror Gate', whereFinal:'Final Gate', whereSanct:'Four Symbols Sanctum',
     reachHidden:'Reach title ???', defeatHidden:'Defeat ???',
     memory:'Memory: {r}', replayEnding:'Watch the ending again', skip:'Skip',
-    mirrorGate:'Mirror Gate', enterMirror:'Face your Reflection', mirrorChance:'Win chance: {p}%', mirrorWin:'You defeated yourself! +1 Mirror Shard (+3% all stats)', mirrorWinMax:'You defeated yourself again! (Shards maxed)', mirrorLose:'Your Reflection won. The mirror will open again in 3 minutes.', shards:'Mirror Shards', mirrorCD:'The mirror is clouded ({t})',
+    mirrorGate:'Mirror Gate', enterMirror:'Face your Reflection', mirrorChance:'Win chance: {p}%', mirrorWin:'You defeated yourself! +1 Mirror Shard (+{p}% all stats)', mirrorWinMax:'You defeated yourself again! (Shards maxed)', mirrorLose:'Your Reflection won. The mirror will open again in 3 minutes.', shards:'Mirror Shards', mirrorCD:'The mirror is clouded ({t})',
     roamName:'Wandering Horror', roamWin:'Horror banished! +{x} aura', roamWinMark:'Horror banished! +{x} aura · +1 Conquest Mark', challengeRoam:'Fight', roamCD:'It will return…',
     music:'Music', sfxVol:'Effects', auraVol:'Aura sound', audioFiles:'Custom audio files found: {n}', audioNone:'Using built-in chill music (put files in /audio to replace)',
   },
@@ -397,7 +400,7 @@ const I18N = {
     whereGate:'Cổng Ngục', whereTower:'Tháp GodK', whereRift:'Cổng Hoang', whereRoam:'Tà Ảnh lang thang', whereMirror:'Cổng Gương', whereFinal:'Cổng Cuối', whereSanct:'Tứ Tượng Thánh Địa',
     reachHidden:'Đạt danh hiệu ???', defeatHidden:'Đánh bại ???',
     memory:'Ký ức: {r}', replayEnding:'Xem lại màn kết', skip:'Bỏ qua',
-    mirrorGate:'Cổng Gương', enterMirror:'Đối mặt Bóng Gương', mirrorChance:'Cơ hội thắng: {p}%', mirrorWin:'Ngươi đã thắng chính mình! +1 Mảnh Gương (+3% mọi chỉ số)', mirrorWinMax:'Ngươi lại thắng chính mình! (Mảnh Gương đã tối đa)', mirrorLose:'Bóng Gương đã thắng. Gương sẽ mở lại sau 3 phút.', shards:'Mảnh Gương', mirrorCD:'Gương đang mờ ({t})',
+    mirrorGate:'Cổng Gương', enterMirror:'Đối mặt Bóng Gương', mirrorChance:'Cơ hội thắng: {p}%', mirrorWin:'Ngươi đã thắng chính mình! +1 Mảnh Gương (+{p}% mọi chỉ số)', mirrorWinMax:'Ngươi lại thắng chính mình! (Mảnh Gương đã tối đa)', mirrorLose:'Bóng Gương đã thắng. Gương sẽ mở lại sau 3 phút.', shards:'Mảnh Gương', mirrorCD:'Gương đang mờ ({t})',
     roamName:'Tà Ảnh Lang Thang', roamWin:'Đã xua tan Tà Ảnh! +{x} bá khí', roamWinMark:'Đã xua tan Tà Ảnh! +{x} bá khí · +1 Ấn Chinh Phục', challengeRoam:'Giao chiến', roamCD:'Nó sẽ quay lại…',
     music:'Nhạc nền', sfxVol:'Hiệu ứng', auraVol:'Âm hào quang', audioFiles:'Đã nhận file âm thanh riêng: {n}', audioNone:'Đang dùng nhạc chill có sẵn (bỏ file vào thư mục /audio để thay)',
   }
@@ -579,9 +582,58 @@ const SYMBOLS = [ // dx, dy from sanctum center; aff = signature mechanic
 // v1.9b: FIXED strength (gate-boss equivalent title) — no longer scales with your current title, so rebirthing can't trivialise it.
 // v1.9.2: calibrated on POWER vs play time with the strongest strategy (rebirth every ~2 min), not on rebirth count:
 // Four Symbols ~12h, Yellow Dragon ~16h, cursed Symbols ~28h, cursed Dragon ~36h. Players who only rebirth when stuck: ~18h / ~29h / >45h.
-const SANCT_REF = { normal: [218, 252], cursed: [330, 346] }; // [four symbols, Yellow Dragon] — v2.1: fight-accurate sim incl. mechanics + Boss Ascension
+const SANCT_REF = { normal: [258, 276], cursed: [319, 329] }; // [four symbols, Yellow Dragon] — v2.1: fight-accurate sim incl. mechanics + Boss Ascension
 const SANCT_CD_WIN = 10*60*1000, SANCT_CD_LOSE = 90*1000, SANCT_XP_SEC = 150;
-const SANCT_BONUS = { normal: [0.02, 0.05], cursed: [0.04, 0.10] }; // permanent all-stat bonus on first clear (each symbol / dragon)
+const SANCT_BONUS = { normal: [0.05, 0.15], cursed: [0.10, 0.30] }; // v2.2 buff (was 2/5 · 4/10 %) // permanent all-stat bonus on first clear (each symbol / dragon)
 const symbolBoss = (sym, cursed) => cursed ? Object.assign({}, sym, { id: sym.id + '_c', base: sym.id, cursed: 1, aff: sym.aff.concat(['void']), en: sym.en.replace(/ of the .*/, '') + ' · Cursed', vi: sym.vi + ' · Nguyền Rủa', intro: { en: ['A curse has soaked into the ' + (sym.center ? 'emperor' : 'guardian') + '.', 'Its eyes are no longer its own.'], vi: ['Lời nguyền đã ngấm vào ' + (sym.center ? 'vị hoàng đế' : 'vị thủ vệ') + '.', 'Đôi mắt ấy không còn là của nó nữa.'] } }) : sym;
 function sanctBonus(S){ const s = S.sanct || {}; let b = 0; for (const sym of SYMBOLS) { if (s[sym.id]) b += SANCT_BONUS.normal[sym.center ? 1 : 0]; if (s[sym.id + '_c']) b += SANCT_BONUS.cursed[sym.center ? 1 : 0]; } return b; }
 const sanctCursedOpen = S => S.best >= MAX_TITLE && !!(S.sanct || {}).yellowdragon;
+
+// ======================================================================================================
+// v1.11 FOUNDATION — equipment & player passives. DATA + PLUMBING ONLY: both features are OFF.
+// Nothing here changes the game while FEATURE_GEAR / FEATURE_PASSIVES are false. See GHI-CHU (v1.12).
+// ======================================================================================================
+const FEATURE_GEAR = false, FEATURE_PASSIVES = false;
+const GEAR_SLOTS = ['weapon', 'armor', 'charm'];
+const GEAR_RARITY = [ // stat budget multiplier per rarity (for future drops)
+  { id:'common',    en:'Common',    vi:'Thường',     col:'#c8c8c8', m:1.0 },
+  { id:'rare',      en:'Rare',      vi:'Hiếm',       col:'#5aa9ff', m:1.6 },
+  { id:'epic',      en:'Epic',      vi:'Sử Thi',     col:'#c070ff', m:2.4 },
+  { id:'legend',    en:'Legendary', vi:'Huyền Thoại', col:'#ffb040', m:3.5 },
+  { id:'godk',      en:'GodK',      vi:'GodK',       col:'#ff5a8a', m:5.0 },
+];
+// Gear item shape (S.gear.inv / S.gear.slots[slot]):
+//   { uid, slot:'weapon'|'armor'|'charm', rar:'rare', lv:<gate it dropped at>, st:{ hp:0.05, atk:0, def:0, crit:0 }, pas:'lifesteal'|null }
+//   st = additive % bonuses (0.05 = +5%), multiplied on top of everything else; crit is flat (+0.02 = +2%).
+function gearMult(S){
+  const out = { hp: 1, atk: 1, def: 1, crit: 0 };
+  if (!FEATURE_GEAR || !S.gear || !S.gear.slots) return out;
+  for (const sl of GEAR_SLOTS) { const it = S.gear.slots[sl]; if (!it || !it.st) continue;
+    out.hp *= 1 + (it.st.hp || 0); out.atk *= 1 + (it.st.atk || 0); out.def *= 1 + (it.st.def || 0); out.crit += it.st.crit || 0; }
+  return out;
+}
+// Player passives ("Thiên Phú"). Same idea as boss AFFIXES but as hooks, so either side of a fight can carry them.
+// Hooks (all optional), c = { f: fight, me: side, foe: side }:
+//   onDeal(c, d) → new outgoing damage · onTake(c, d) → new incoming damage · onTurn(c) · onDeath(c) → true = survive
+const PASSIVE_SLOTS = 3;
+const PASSIVES = {
+  lifesteal: { ico:'🐉', en:'Azure Dragon\'s Thirst', vi:'Thanh Long Hút Huyết', src:'sanct:azure',
+    d:{ en:'Heal 5% of damage dealt', vi:'Hồi 5% sát thương gây ra' },
+    onDeal: (c, d) => { c.me.hp = Math.min(c.me.st.hp, c.me.hp + d*0.05); return d; } },
+  tigerfang:  { ico:'🐯', en:'White Tiger\'s Fang', vi:'Bạch Hổ Nanh Vuốt', src:'sanct:tiger',
+    d:{ en:'Every 4th hit deals ×2', vi:'Mỗi đòn thứ 4 gây ×2' },
+    onDeal: (c, d) => (c.f.round % 4 === 0 ? d*2 : d) },
+  rebirth:    { ico:'🔥', en:'Vermilion Rebirth', vi:'Chu Tước Niết Bàn', src:'sanct:phoenix',
+    d:{ en:'Once per fight, survive a lethal blow with 30% HP', vi:'Mỗi trận 1 lần: sống lại với 30% máu' },
+    onDeath: c => { if (c.me.fx.reborn) return false; c.me.fx.reborn = 1; c.me.hp = c.me.st.hp*0.3; return true; } },
+  shell:      { ico:'🐢', en:'Black Tortoise Shell', vi:'Huyền Vũ Giáp', src:'sanct:tortoise',
+    d:{ en:'Take 20% less damage above half HP', vi:'Nhận ít hơn 20% sát thương khi trên nửa máu' },
+    onTake: (c, d) => (c.me.hp > c.me.st.hp*0.5 ? d*0.8 : d) },
+  reflect:    { ico:'🪞', en:'Mirror Reflection', vi:'Phản Chiếu', src:'mirror',
+    d:{ en:'Reflect 1% of damage taken per Mirror Shard', vi:'Phản 1% sát thương nhận mỗi Mảnh Gương' },
+    onTake: (c, d) => { c.foe.hp -= d*0.01*(c.me.shards || 0); return d; } },
+  pierce:     { ico:'🗡', en:'Armor Pierce', vi:'Xuyên Giáp', src:'gear',
+    d:{ en:'Ignore 30% of enemy Resolve', vi:'Bỏ qua 30% Ý chí đối thủ' },
+    onDeal: (c, d) => d*(1 + 0.3*c.foe.st.def/(c.me.st.atk + c.foe.st.def)) }, // approx of a²/(a+0.7d)
+};
+const activePassives = S => FEATURE_PASSIVES ? (S.passives || []).filter(id => PASSIVES[id]).slice(0, PASSIVE_SLOTS) : [];
