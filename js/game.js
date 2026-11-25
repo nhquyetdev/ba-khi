@@ -149,7 +149,7 @@
     const ev = eventAt(Date.now()); const evOpen = ev.active && S.buffEv !== ev.idx;
     $('hEvent').innerHTML = evOpen ? `✨ ${esc(T('eventLeft').replace('{n}', ev.type[S.lang]).replace('{t}', mmss(ev.endsAt - Date.now())))}` : `<span class="muted">⏳ ${esc(T('eventNext').replace('{t}', mmss(ev.nextAt - Date.now())))}</span>`;
     $('capMsg').style.display = capped() ? 'block' : 'none';
-    if (S.t >= MAX_TITLE) { const fl = towerFloor(S.t), bp = towerBossPas(fl, towerBoss(fl)); $('capMsg').textContent = (fl >= TOWER_NEW_FROM && fl <= HELL_TO ? '🔥 ' : '🗼 ') + T('towerNext').replace('{n}', fl).replace('{a}', towerAffixes(fl, Date.now()).map(a => a.ico + ' ' + a[S.lang]).join(' · ')) + (bp ? ' · 😈 ' + bp.pas.map(id => PASSIVES[id].ico).join('') + ' ' + ROMAN(bp.rank) : ''); }
+    if (towerPaused()) $('capMsg').textContent = T('towerPaused'); else if (S.t >= MAX_TITLE) { const fl = towerFloor(S.t), bp = towerBossPas(fl, towerBoss(fl)); if (fl === QUEEN_FLOOR) $('capMsg').textContent = '✴ ' + T('towerNext').replace('{n}', fl).replace('{a}', S.lang === 'vi' ? QUEEN.vi : QUEEN.en) + ' · ' + T('qPassive'); else $('capMsg').textContent = (fl >= TOWER_NEW_FROM && fl <= HELL_TO ? '🔥 ' : '🗼 ') + T('towerNext').replace('{n}', fl).replace('{a}', towerAffixes(fl, Date.now()).map(a => a.ico + ' ' + a[S.lang]).join(' · ')) + (bp ? ' · 😈 ' + bp.pas.map(id => PASSIVES[id].ico).join('') + ' ' + ROMAN(bp.rank) : ''); }
     else $('capMsg').textContent = T('capReached');
     const tg = scene === 'world' ? nearTarget() : null;
     $('gateBtn').style.display = tg ? 'block' : 'none';
@@ -213,7 +213,7 @@
       ${S.R ? `<tr><td>✦ ${T('rebirths')}</td><td>${S.R}</td></tr><tr><td>💠 ${T('essence')}</td><td>${S.E}</td></tr><tr><td>💠 ${T('essBonus')}</td><td>×${F.essMult(S.E).toFixed(2)}</td></tr>` : ''}
       <tr><td>📈 ${T('xpBonus')}</td><td>×${((1 + S.R)*(1 + 0.05*S.stelae.length)*(1 + 0.01*(S.marks||0))).toFixed(2)}</td></tr>
       ${S.stelae.length ? `<tr><td>🗿 ${T('stelae')}</td><td>${S.stelae.length} / ${STELAE.length}</td></tr>` : ''}
-      ${S.marks ? `<tr><td>⛩ ${T('marks')}</td><td>${S.marks} / ${MAX_MARKS}</td></tr>` : ''}${S.shards ? `<tr><td>🪞 ${T('shards')}</td><td>${S.shards} / ${MAX_SHARDS} (+${Math.round(S.shards*SHARD_BONUS*100)}%)</td></tr>` : ''}${sanctBonus(S) ? `<tr><td>⛩ ${T('sanctBonus')}</td><td>+${Math.round(sanctBonus(S)*100)}%</td></tr>` : ''}${S.best > MAX_TITLE ? `<tr><td>🗼 ${T('towerBest')}</td><td>${S.best - MAX_TITLE}</td></tr>` : ''}${Object.keys(S.nm || {}).length ? `<tr><td>👁 ${T('nmTiers')}</td><td>${SYMBOLS.map(x => SYM_ICO[x.id] + ROMAN(nmTier(S, x.id) || 0 ) ).join(' ')}</td></tr>` : ''}${S.trans ? `<tr><td>✧ ${T('trans')}</td><td>+${fmt(S.transRate)}/h</td></tr>` : ''}${(S.xeno || {}).lv ? `<tr><td>🛸 ${T('xenoLv').replace('{n}', S.xeno.lv)}</td><td>+${S.xeno.lv*2}% · ✴+${S.xeno.lv}%</td></tr>` : ''}${activePassives(S).length ? `<tr><td>✦ ${T('talents')}</td><td>${activePassives(S).map(id => PASSIVES[id].ico + ' ' + ROMAN(passiveRank(S, id))).join(' · ')}</td></tr>` : ''}<tr><td>⚔ ${T('pvpWins')}</td><td>${S.pvpW}</td></tr></table>${S.marks ? `<p class="muted small">⛩ ${T('markEffect')}</p>` : ''}
+      ${S.marks ? `<tr><td>⛩ ${T('marks')}</td><td>${S.marks} / ${MAX_MARKS}</td></tr>` : ''}${S.shards ? `<tr><td>🪞 ${T('shards')}</td><td>${S.shards} / ${MAX_SHARDS} (+${Math.round(S.shards*SHARD_BONUS*100)}%)</td></tr>` : ''}${sanctBonus(S) ? `<tr><td>⛩ ${T('sanctBonus')}</td><td>+${Math.round(sanctBonus(S)*100)}%</td></tr>` : ''}${S.best > MAX_TITLE ? `<tr><td>🗼 ${T('towerBest')}</td><td>${S.best - MAX_TITLE}</td></tr>` : ''}${Object.keys(S.nm || {}).length ? `<tr><td>👁 ${T('nmTiers')}</td><td>${SYMBOLS.map(x => SYM_ICO[x.id] + ROMAN(nmTier(S, x.id) || 0 ) ).join(' ')}</td></tr>` : ''}${S.petUnlock ? `<tr><td colspan="2">${T('petSoon')}</td></tr>` : ''}${S.trans ? `<tr><td>✧ ${T('trans')}</td><td>+${fmt(S.transRate)}/h</td></tr>` : ''}${(S.xeno || {}).lv ? `<tr><td>🛸 ${T('xenoLv').replace('{n}', S.xeno.lv)}</td><td>+${S.xeno.lv*2}% · ✴+${S.xeno.lv}%</td></tr>` : ''}${activePassives(S).length ? `<tr><td>✦ ${T('talents')}</td><td>${activePassives(S).map(id => PASSIVES[id].ico + ' ' + ROMAN(passiveRank(S, id))).join(' · ')}</td></tr>` : ''}<tr><td>⚔ ${T('pvpWins')}</td><td>${S.pvpW}</td></tr></table>${S.marks ? `<p class="muted small">⛩ ${T('markEffect')}</p>` : ''}
       ${S.stelae.length ? `<div class="lore">${S.stelae.map(i => `<p>🗿 ${esc(STELAE_LORE[i][S.lang])}</p>`).join('')}</div>` : ''}
       <div class="row"><button class="btn" data-close>${T('close')}</button></div>`);
   }
@@ -228,7 +228,7 @@
       const [k, a] = P.src.split(':'), srcTxt = k === 'sanct' ? T('src_sanct').replace('{n}', nmBoss(SYMBOLS.find(x => x.id === a))[S.lang]) : k === 'xeno' ? '🛸 ' + T('xeno') + ': ' + (S.best >= MAX_TITLE ? XENO_BOSSES[+a][S.lang] : '???') : T('src_' + k);
       const name = ok ? `${P.ico} ${P[S.lang]}` : `🔒 ${(k === 'sanct' && !nmOpen(S)) || (k === 'xeno' && S.best < MAX_TITLE) ? '???' : P[S.lang]}`;
       h += `<button class="wItem${on ? ' on' : ''}${ok ? '' : ' lockedW'}" data-pas="${id}" ${ok ? '' : 'disabled'}><b>${esc(name)}</b>
-        <small>${ok ? esc(P.d[S.lang].replace('{v}', P.val(r))) + (k === 'sanct' ? ' · ' + T('talentRank').replace('{r}', r).replace('{m}', PASSIVE_RANK_MAX) : '') : esc((k === 'sanct' && !nmOpen(S)) || (k === 'xeno' && S.best < MAX_TITLE) ? T('talentLocked') : srcTxt)}</small>
+        <small>${ok ? esc(P.d[S.lang].replace('{v}', P.val(r))) + (k === 'sanct' || P.xrank ? ' · ' + T('talentRank').replace('{r}', r).replace('{m}', PASSIVE_RANK_MAX) : '') : esc((k === 'sanct' && !nmOpen(S)) || (k === 'xeno' && S.best < MAX_TITLE) ? T('talentLocked') : srcTxt)}</small>
         ${ok ? `<small>${on ? '✔ ' + T('equipped') : T('equip')}</small>` : ''}</button>`; }
     h += `</div><div class="row"><button class="btn" data-close>${T('close')}</button></div>`; modal(h);
     document.querySelectorAll('[data-pas]:not([disabled])').forEach(b => b.onclick = () => { const id = b.dataset.pas, i = S.passives.indexOf(id);
@@ -246,6 +246,7 @@
     if (gTab === 'traits') for (const id in TRAITS) { const t = TRAITS[id], m = t.m; h += item(`${t.ico} ${esc(t[S.lang])}`, `${T('hp')} ×${m[0]} · ${T('atk')} ×${m[1]} · ${T('def')} ×${m[2]}`); }
     if (gTab === 'mech') { h += item(`🔱 ${esc(T('mechTransform').split(':')[0])}`, T('mechTransform').replace('{h}', 15).replace('{a}', 20));
       if (S.best >= MAX_TITLE) h += item(`😈 ${esc(T('bossTalents'))}`, T('bossTalentsD'));
+      h += S.best >= MAX_TITLE - 1 + QUEEN_FLOOR - 1 ? item(`✴ ${esc(T('qPassive'))}`, T('qPassiveD')) : item('✴ ???', '???');
       for (const A of AFFIXES) h += item(`${A.ico} ${esc(A[S.lang])}`, A.d[S.lang]);
       const seenX = S.best >= MAX_TITLE; for (const A of XAFFIXES) h += seenX ? item(`${A.ico} ${esc(A[S.lang])} 🛸`, A.d[S.lang]) : item('🛸 ???', '???'); }
     if (gTab === 'talent') for (const id in PASSIVES) { const P = PASSIVES[id]; if (P.hidden) continue; const r = Math.max(1, passiveRank(S, id)), [k, a] = P.src.split(':'), locked = (k === 'sanct' && !nmOpen(S)) || (k === 'xeno' && S.best < MAX_TITLE);
@@ -423,8 +424,9 @@
 
   // ---------------- Interact / Gate ----------------
   const riftReady = i => Date.now() >= ((S.riftCD || {})[i] || 0);
+  function towerPaused(){ return S.t >= MAX_TITLE && towerFloor(S.t) > TOWER_CAP; } // v2.4: sealed after the Empress
   function nearTarget(){
-    if (capped() && Math.hypot(me.x - GATE.x, me.y - GATE.y) < 170) return { kind: 'boss' };
+    if (capped() && !towerPaused() && Math.hypot(me.x - GATE.x, me.y - GATE.y) < 170) return { kind: 'boss' };
     if (Date.now() >= (S.mirrorCD || 0) && Math.hypot(me.x - MIRROR_GATE.x, me.y - MIRROR_GATE.y) < 130) return { kind: 'mirror' };
     if (S.best >= MAX_TITLE && !S.xenoOpen && Math.hypot(me.x - XENO.gate[0], me.y - XENO.gate[1]) < 160 && xenoReady(0)) return { kind: 'xeno', i: 0 };
     if (onXeno()) for (const w of ['core', 'spire']) { const [ax, ay] = xenoAbs(XENO_SPOTS[w]); if (Math.hypot(me.x - ax, me.y - ay) < 170) { const i = xenoTargetIdx(w); if (i >= 0 && xenoReady(i)) return { kind: 'xeno', i }; } }
@@ -466,7 +468,8 @@
       const fl = towerFloor(g), B = towerBoss(fl), aff = towerAffixes(fl, Date.now()), ids = aff.map(a => a.id), st = Object.assign({}, F.boss(g)), guardian = fl % 10 === 0;
       if (guardian) { st.hp *= 1.3; st.atk *= 1.15; }
       if (fl >= TOWER_NEW_FROM) { st.hp *= TOWER_HELL_M; st.atk *= TOWER_HELL_M; st.def *= TOWER_HELL_M; } // v2.3: talents era
-      beginBossFight({ kind: 'boss', g, B, st, form: towerForm(fl), jump: 1, bp: towerBossPas(fl, B), tower: { fl, aff: ids, guardian, hell: !!B.hell, name: towerBossName(B, fl, S.lang) } }); return; }
+      if (B.queen) { st.hp *= QUEEN_CFG.mult; st.atk *= QUEEN_CFG.mult; st.def *= QUEEN_CFG.mult; ids.length = 0; } // v2.4: no weekly affixes — only her own law
+      beginBossFight({ kind: 'boss', g, B, st, form: towerForm(fl), jump: 1, bp: B.queen ? null : towerBossPas(fl, B), queen: !!B.queen, tower: { fl, aff: ids, guardian, hell: !!B.hell, name: towerBossName(B, fl, S.lang) } }); return; }
     beginBossFight({ kind: 'boss', g, B: bossFor(g), st: F.boss(g), form: bossForm(g), jump: isRealmEnd(g) ? 2 : 1 }); }
   function startRift(i){
     const RK = RIFT_RANKS[RIFTS[i][2]], g = S.t, b = F.boss(g), pool = unlockedBosses(g);
@@ -519,6 +522,7 @@
     if (aff.includes('void')) fight.L.st = Object.assign({}, fight.L.st, { crit: 0 });
     if (['boss', 'rift', 'roam', 'sanct', 'xeno'].includes(o.kind) && B.id !== 'finalmirror') fight.mech = F.transformMech(o.mechG || g, o.kind === 'boss' && isRealmEnd(g));
     if (o.bp) { fight.Rt.pas = o.bp.pas.slice(); fight.Rt.prank = o.bp.prank; } // v2.3 Tower boss talents
+    if (o.queen) { fight.mech = null; fight.q = { shield: st.hp*QUEEN_CFG.shield, shieldMax: st.hp*QUEEN_CFG.shield, adapt: 0, enr: false, rev: false }; fight.Rt.name = S.lang === 'vi' ? B.vi : B.en; }
     if (aff.includes('mimic') && fight.L.pas.length) { fight.Rt.pas = [fight.L.pas[0]]; fight.Rt.prank = fight.L.prank; fight.Rt.shards = S.shards || 0; } // v2.1 Assimilate
     if (o.kind === 'xeno') fight.Rt.name = S.lang === 'vi' ? B.vi : B.en;
     if (o.kind === 'sanct') fight.Rt.name = (S.lang === 'vi' ? B.vi : B.en) + (o.nmTier ? ' · ' + ROMAN(o.nmTier) : '');
@@ -538,7 +542,12 @@
   function pas(f, me, foe, hook, d, crit){ if (!me.pas || !me.pas.length) return hook === 'onDeath' ? false : d; const c = { f, me, foe, crit };
     for (const id of me.pas) { const P = PASSIVES[id]; if (!P || !P[hook]) continue; if (hook === 'onDeath') { if (P.onDeath(c)) return true; } else if (hook === 'onTurn') P.onTurn(c); else d = P[hook](c, d); }
     return hook === 'onDeath' ? false : d; }
-  const dead = (f, me, foe) => me.hp <= 0 && !pas(f, me, foe, 'onDeath');
+  const dead = (f, me, foe) => { if (me.hp > 0) return false;
+    if (f.q && me === f.Rt && !f.q.rev) { f.q.rev = true; me.hp = me.st.hp*QUEEN_CFG.revive; f.q.shield = f.q.shieldMax; // ⑤ the ending is already written
+      bigBanner(T('qQuote'), T('qRev'), '#ffe9a8'); flash('#fff', 1); sfx.transform(); f.nums.push({ side: 'R', v: 0, rev: 1, life: 1.4, ox: 0 }); return false; }
+    if (!pas(f, me, foe, 'onDeath')) return true; // v2.3.1: visible feedback when someone revives
+    const P = PASSIVES.rebirth; bigBanner('🔥 ' + P[S.lang] + '!', me.name || '', '#ffb040'); flash('#ff8030', 0.5); sfx.transform();
+    f.nums.push({ side: me === f.L ? 'L' : 'R', v: 0, rev: 1, life: 1.4, ox: 0 }); return false; };
   function xActive(f){ const a = f.aff || []; if (!a.includes('phases')) return a; // v2.1 Nebula Sower: mechanic changes every 25% HP
     const q = Math.min(3, Math.floor((1 - Math.max(0, f.Rt.hp)/f.Rt.st.hp)*4)); if (q !== f.ph4) { f.ph4 = q; if (f.round > 1) { const X_ = XAFFIXES.find(x => x.id === XPHASES[q]); bigBanner('♻', X_.ico + ' ' + X_[S.lang], '#b080ff'); sfx.transform(); } } return a.concat([XPHASES[q]]); }
   function hitCalc(att, def, rng){ let d = F.dmg(att.atk, def.def) * (0.9 + rng()*0.2); const crit = rng() < att.crit; if (crit) d *= 2.5; return [d, crit]; }
@@ -549,7 +558,7 @@
       const tick = 0.5;
       while (f.timer >= tick && f.phase === 'fight') {
         f.timer -= tick; f.round++;
-        const AF = f.aff || [], XA = xActive(f), noHeal = f.kind !== 'pvp' && (f.L.pas || []).includes('purify'); // v2.1: Purify blocks every boss heal
+        const AF = f.aff || [], XA = xActive(f), hk = healKeep(f.L); // v2.4: Purify cuts boss healing by 35–80% (was: blocked)
         // left attacks (v2.1: Twin Shadow = a second, separate hit; Map-2 mechanics apply per hit)
         let over = 0;
         for (const mul of ((f.L.pas || []).includes('multi') ? [1, 0.5] : [1])) {
@@ -557,27 +566,35 @@
           if (AF.includes('shield') && f.Rt.hp > f.Rt.st.hp*0.5) d *= 0.5;
           if (XA.includes('quantum') && !c) d = 0;                          // Quantum Shield: only crits land
           if (XA.includes('dmgcap')) d = Math.min(d, f.Rt.st.hp*0.03);      // Damage Cap: ≤3% max HP per hit
+          let sd = null;
+          if (f.q) { const Q = QUEEN_CFG, q = f.q;                         // v2.4「Thiên Đạo Bất Khả Nghịch」
+            if (f.rng() < Q.dodge) { f.nums.push({ side: 'R', v: 0, miss: 1, life: 1, ox: (Math.random() - 0.5)*80 }); f.L.atk = 1; continue; } // ③ Evasion V
+            d *= 1 - q.adapt; q.adapt = Math.min(Q.adaptMax, q.adapt + Q.adaptStep);                          // ② Adaptation
+            if (q.shield > 0) { sd = d; const a = Math.min(d, q.shield); q.shield -= a; d -= a;                  // ① Heaven Armor
+              if (q.shield <= 0) { q.adapt = 0; bigBanner('⚡', T('qBreak'), '#ffe080'); flash('#fff8d0', 0.7); sfx.transform(); } } }
           if (AF.includes('thorns')) { f.L.hp -= d*0.2; if (dead(f, f.L, f.Rt)) { f.L.hp = 0; over = 2; break; } }
           if (XA.includes('reflect') && !c && d > 0) { f.L.hp -= d*0.5; f.L.hurt = 0.25; if (dead(f, f.L, f.Rt)) { f.L.hp = 0; over = 2; break; } } // Reflector
           if (f.script !== undefined) { d *= f.script ? 1.3 : 0.8; if (!f.script && f.Rt.hp - d <= 0) d = Math.max(0, f.Rt.hp - 1); } f.Rt.hp -= d; f.Rt.hurt = 0.25; f.L.atk = 1;
-          f.beams.push({ from: 'L', life: 0.35, crit: c }); f.nums.push({ side: 'R', v: d, crit: c, imm: d === 0, life: 1, ox: (Math.random() - 0.5)*80 }); sfx.hit();
+          f.beams.push({ from: 'L', life: 0.35, crit: c }); f.nums.push({ side: 'R', v: sd !== null ? sd : d, crit: c, imm: (sd !== null ? sd : d) === 0, sh: sd !== null, life: 1, ox: (Math.random() - 0.5)*80 }); sfx.hit();
           if (dead(f, f.Rt, f.L)) { over = 1; break; }
-          if (XA.includes('absorb') && !noHeal) f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + d*0.3); // Absorb
+          if (f.q && f.q.rev && !f.q.revT) { f.q.revT = 1; break; } // her rebirth ends your combo
+          if (XA.includes('absorb')) f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + d*0.3*hk); // Absorb
         }
         if (over) { end(over === 1); break; }
-        if (f.mech && !f.mechDone && f.Rt.hp < f.Rt.st.hp*0.5) { f.mechDone = true; if (!noHeal) f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + f.Rt.st.hp*f.mech[0]); f.Rt.st = Object.assign({}, f.Rt.st, { atk: f.Rt.st.atk*f.mech[1] }); f.aBoost = 1;
+        if (f.q && !f.q.enr && f.Rt.hp < f.Rt.st.hp*0.5) { f.q.enr = true; f.Rt.st = Object.assign({}, f.Rt.st, { atk: f.Rt.st.atk*QUEEN_CFG.enrage }); bigBanner('🔥', T('qEnr'), '#ff6040'); flash('#ff3020', 0.5); } // ④
+        if (f.mech && !f.mechDone && f.Rt.hp < f.Rt.st.hp*0.5) { f.mechDone = true; f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + f.Rt.st.hp*f.mech[0]*hk); f.Rt.st = Object.assign({}, f.Rt.st, { atk: f.Rt.st.atk*f.mech[1] }); f.aBoost = 1;
           if (f.transformed) { flash('#ff4060', 0.5); sfx.transform(); bigBanner(T('awaken'), f.Rt.name, '#ff6a80'); } }
         if (f.kind !== 'pvp' && !f.transformed && f.Rt.hp < f.Rt.st.hp*0.5) { f.transformed = true; f.form = Math.min(BOSS_FORMS.length - 1, f.form + f.jump); f.aBoost = 1;
           f.Rt.name = bossName(f.B, f.form) + (f.nmTier ? ' · ' + ROMAN(f.nmTier) : ''); const FF = BOSS_FORMS[f.form]; flash(`hsl(${FF.h},${FF.s}%,${FF.l}%)`, 0.7); sfx.transform();
           bigBanner(T('transform'), f.Rt.name, `hsl(${FF.h},${FF.s}%,${Math.max(60, FF.l)}%)`); }
-        if (AF.includes('enrage')) f.enr *= 1.06; if (AF.includes('regen') && !noHeal) f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + f.Rt.st.hp*0.03);
+        if (AF.includes('enrage')) f.enr *= 1.06; if (AF.includes('regen')) f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + f.Rt.st.hp*0.03*hk);
         // right attacks (Twin Shadow also works for a PvP opponent)
         let over2 = 0, anyCrit = false;
         for (const mul of ((f.Rt.pas || []).includes('multi') ? [1, 0.5] : [1])) {
           let [d, c] = hitCalc(f.Rt.st, f.L.st, f.rng); d *= mul; if (c && AF.includes('crit')) d *= 1.2; d *= (f.enr || 1);
           if (mul === 1 && AF.includes('twin') && f.round % 3 === 0) d *= 2;
           d = pas(f, f.L, f.Rt, 'onTake', pas(f, f.Rt, f.L, 'onDeal', d, c), c);
-          if (AF.includes('leech') && !noHeal) f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + d*0.3);
+          if (AF.includes('leech')) f.Rt.hp = Math.min(f.Rt.st.hp, f.Rt.hp + d*0.3*hk);
           if (f.script !== undefined) { d *= f.script ? 0.8 : 1.3; if (f.script && f.L.hp - d <= 0) d = Math.max(0, f.L.hp - 1); } f.L.hp -= d; f.L.hurt = 0.25; f.Rt.atk = 1; anyCrit = anyCrit || c;
           f.beams.push({ from: 'R', life: 0.35, crit: c }); f.nums.push({ side: 'L', v: d, crit: c, life: 1, ox: (Math.random() - 0.5)*80 });
           if (dead(f, f.L, f.Rt)) { over2 = 2; break; }
@@ -601,6 +618,8 @@
   function finishFight(){
     const f = fight; fight = null; scene = 'world'; $('hud').classList.remove('dim'); $('fightUI').style.display = 'none'; $('fightHelp').style.display = 'none';
     if (f.kind === 'boss') { me.x = GATE.x; me.y = GATE.y + 200; if (f.result) { S.stats.bossWins = (S.stats.bossWins || 0) + 1;
+      if (f.B.queen) { const first = !S.queenDown; S.queenDown = 1; S.petUnlock = 1; titleUp(true); if (first) setTimeout(() => { sfx.title(); flash('#fff8d8', 1.2);
+        modal(`<h2 style="color:#ffe9a8">✴ ${T('qDownT')} ✴</h2><p class="muted"><i>${esc(T('qQuote'))}</i></p><p style="white-space:pre-line">${esc(T('qDown'))}</p><div class="row"><button class="btn gold" data-close>OK</button></div>`); }, 1200); return; }
       if (f.B.id === 'finalmirror') { S.stats.finalWins = (S.stats.finalWins || 0) + 1; const first = !S.ended; S.ended = true; save(); if (first) { playEnding(() => titleUp(true)); return; } }
       titleUp(true); } }
     else if (f.kind === 'xeno') { const i = f.riftI, B = XENO_BOSSES[i]; S.xcd = S.xcd || {}; S.xcd[i] = Date.now() + (f.result ? XENO_CD_WIN : XENO_CD_LOSE);
@@ -895,6 +914,7 @@
       } else
       if (f.kind === 'mirror') { R.character(ctx, rx + lunge*0.5, floorY, sc*1.3, { t: S.t, sk: S.sk, as: S.as, face: -1, fx: f.Rt.fx, mirror: true, seed: 7, moving: false }, time); } else {
       ctx.save(); ctx.globalAlpha *= 1; R.bossAura(ctx, rx + lunge, floorY, S_, time, f.form, Math.max(f.aBoost, f.towerBoost || 0)); ctx.restore();
+      if (f.q) Object.assign(f.Rt.fx, { qs: f.q.shield/f.q.shieldMax, qe: f.q.enr ? 1 : 0, qr: f.q.rev ? 1 : 0 });
       R.boss(ctx, f.B.id, rx + lunge, floorY, S_, time, { hue: f.hue, hurt: f.Rt.hurt, atk: f.Rt.atk, g: f.g, target: [lx - rx, -S_*0.3], fx: f.Rt.fx }); }
       ctx.globalAlpha = 1;
       if (f.Rt.hurt > 0) burn(rx, floorY - S_*0.5, S_*0.3);
@@ -917,7 +937,7 @@
     // numbers
     f.nums = f.nums.filter(n => (n.life -= dt) > 0); ctx.textAlign = 'center';
     for (const n of f.nums) { const x = n.side === 'R' ? rx : lx; ctx.font = `bold ${(n.crit ? 30 : 20)*Math.max(0.8, sc)}px ${FONT}`; ctx.fillStyle = n.crit ? '#ffcc33' : (n.side === 'L' ? '#ff5050' : '#fff');
-      ctx.globalAlpha = Math.min(1, n.life*2); ctx.fillText(n.imm ? T('immune') : (n.crit ? '✴' : '') + fmt(n.v), x + (n.ox||0), floorY - 200*sc - (1 - n.life)*60); } ctx.globalAlpha = 1;
+      ctx.globalAlpha = Math.min(1, n.life*2); ctx.fillText(n.miss ? T('qMiss') : n.rev ? '🔥 ' + Math.round((me_ => me_.hp/me_.st.hp*100)(n.side === 'L' ? f.L : f.Rt)) + '%' : n.imm ? T('immune') : (n.crit ? '✴' : '') + fmt(n.v), x + (n.ox||0), floorY - 200*sc - (1 - n.life)*60); } ctx.globalAlpha = 1;
     // vignette + flicker for boss
     if (boss) { const vg = ctx.createRadialGradient(W*0.5, H*0.55, Math.min(W, H)*0.2, W*0.5, H*0.55, Math.max(W, H)*0.7); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.92)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
       if (Math.random() < 0.02) { ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, W, H); }
@@ -929,8 +949,11 @@
     // v1.8 affix chips
     { const chips = []; if (f.kind !== 'pvp' && f.B && f.B.trait && TRAITS[f.B.trait]) { const TT = TRAITS[f.B.trait]; chips.push([`${TT.ico} ${TT[S.lang]}`, '#ffb020', 'rgba(50,30,0,0.8)']); }
       (f.aff || []).forEach(id => { const A = AFFIXES.find(a => a.id === id) || XAFFIXES.find(a => a.id === id); if (A) chips.push([`${A.ico} ${A[S.lang]}`, XAFFIXES.includes(A) ? '#40f0ff' : '#ff5060', XAFFIXES.includes(A) ? 'rgba(0,25,40,0.8)' : 'rgba(40,0,10,0.75)']); });
+      if (f.q) { chips.push([`✴ ${T('qPassive')} · ${T('qName')}`, '#ffd040', 'rgba(50,35,0,0.85)']); chips.push([`🛡 ${T('qShield')} ${Math.round(Math.max(0, f.q.shield/f.q.shieldMax)*100)}%`, '#ffe9a8', 'rgba(40,30,0,0.8)']);
+        chips.push([`🧠 ${T('qAdapt').replace('{p}', Math.round(f.q.adapt*100))}`, '#c0a0ff', 'rgba(25,0,40,0.8)']); chips.push([`💨 ${T('qDodge')}`, '#a0e0ff', 'rgba(0,25,40,0.8)']);
+        chips.push([`🔥 ${T('qEnr')}${f.q.enr ? ' ✓' : ''}`, '#ff8060', 'rgba(40,10,0,0.8)']); chips.push([`♾ ${T('qRev')}${f.q.rev ? ' ✓' : ''}`, '#ffe9a8', 'rgba(40,30,0,0.8)']); }
       if (f.ph4 !== undefined) { const X_ = XAFFIXES.find(a => a.id === XPHASES[f.ph4]); chips.push([`♻ → ${X_.ico} ${X_[S.lang]}`, '#c080ff', 'rgba(25,0,40,0.8)']); }
-      if ((f.Rt.pas || []).length) { const tw = f.tower; f.Rt.pas.forEach(id => { const P = PASSIVES[id]; if (P) chips.push([`${tw ? '😈' : '🧬'} ${P.ico} ${P[S.lang]}${tw ? ' ' + ROMAN((f.Rt.prank || {})[id] || 1) : ''}`, tw ? '#ff7040' : '#40f0ff', tw ? 'rgba(40,10,0,0.8)' : 'rgba(0,25,40,0.8)']); }); }
+      if ((f.Rt.pas || []).length) { const tw = f.tower; f.Rt.pas.forEach(id => { const P = PASSIVES[id]; if (P) chips.push([`${tw ? '😈' : '🧬'} ${P.ico} ${P[S.lang]}${tw ? ' ' + ROMAN((f.Rt.prank || {})[id] || 1) : ''}${id === 'rebirth' && f.Rt.fx.reborn ? ' ✓' : ''}`, tw ? '#ff7040' : '#40f0ff', tw ? 'rgba(40,10,0,0.8)' : 'rgba(0,25,40,0.8)']); }); }
       if (f.mech) chips.push([`🔱 ${T('mechTransform').replace('{h}', Math.round(f.mech[0]*100)).replace('{a}', Math.round((f.mech[1] - 1)*100))}${f.mechDone ? ' ✓' : ''}`, '#c080ff', 'rgba(25,0,40,0.75)']);
       { const lp = f.L.pas || []; ctx.textAlign = 'left'; ctx.font = `600 12px ${FONT}`; lp.forEach((id, i) => { const P = PASSIVES[id]; if (!P) return; const r = (f.L.prank || {})[id] || 1, txt = `${P.ico} ${P[S.lang]} ${ROMAN(r)}${id === 'rebirth' && f.L.fx.reborn ? ' ✓' : ''}`, w = ctx.measureText(txt).width + 16, x = 16, y = 100 + i*24;
         ctx.fillStyle = 'rgba(0,20,30,0.75)'; ctx.fillRect(x, y - 15, w, 20); ctx.strokeStyle = '#60e0ff'; ctx.strokeRect(x, y - 15, w, 20); ctx.fillStyle = '#d8f8ff'; ctx.fillText(txt, x + 8, y); }); }
@@ -955,6 +978,7 @@
     const bw = Math.min(320, W*0.4);
     bar(16, 40, bw, f.L.hp, f.L.st.hp, f.L.name, f.L.t, false);
     bar(W - bw - 16, 40, bw, f.Rt.hp, f.Rt.st.hp, f.Rt.name, f.Rt.t, boss);
+    if (f.q) { const x = W - bw - 16, k = Math.max(0, f.q.shield/f.q.shieldMax); ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(x, 70, bw, 6); ctx.fillStyle = '#ffe9a8'; ctx.shadowColor = '#fff2b0'; ctx.shadowBlur = k > 0 ? 10 : 0; ctx.fillRect(x, 70, bw*k, 6); ctx.shadowBlur = 0; } // armor bar under the HP bar
   }
   function burn(x, y, r){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 14; i++) { const a = Math.random()*7, d = Math.random()*r;
     ctx.fillStyle = `hsla(${20 + Math.random()*30},100%,${50 + Math.random()*30}%,0.6)`; ctx.beginPath(); ctx.arc(x + Math.cos(a)*d, y + Math.sin(a)*d, 3 + Math.random()*8, 0, 7); ctx.fill(); } ctx.restore(); }
