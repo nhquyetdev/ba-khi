@@ -149,12 +149,13 @@
     const ev = eventAt(Date.now()); const evOpen = ev.active && S.buffEv !== ev.idx;
     $('hEvent').innerHTML = evOpen ? `✨ ${esc(T('eventLeft').replace('{n}', ev.type[S.lang]).replace('{t}', mmss(ev.endsAt - Date.now())))}` : `<span class="muted">⏳ ${esc(T('eventNext').replace('{t}', mmss(ev.nextAt - Date.now())))}</span>`;
     $('capMsg').style.display = capped() ? 'block' : 'none';
-    if (towerPaused()) $('capMsg').textContent = T('towerPaused'); else if (S.t >= MAX_TITLE) { const fl = towerFloor(S.t), bp = towerBossPas(fl, towerBoss(fl)); if (fl === QUEEN_FLOOR) $('capMsg').textContent = '✴ ' + T('towerNext').replace('{n}', fl).replace('{a}', S.lang === 'vi' ? QUEEN.vi : QUEEN.en) + ' · ' + T('qPassive'); else $('capMsg').textContent = (fl >= TOWER_NEW_FROM && fl <= HELL_TO ? '🔥 ' : '🗼 ') + T('towerNext').replace('{n}', fl).replace('{a}', towerAffixes(fl, Date.now()).map(a => a.ico + ' ' + a[S.lang]).join(' · ')) + (bp ? ' · 😈 ' + bp.pas.map(id => PASSIVES[id].ico).join('') + ' ' + ROMAN(bp.rank) : ''); }
+    if (towerPaused()) $('capMsg').textContent = T('towerPaused'); else if (S.t >= MAX_TITLE) { const fl = queenOwed() ? QUEEN_FLOOR : towerFloor(S.t), bp = towerBossPas(fl, towerBoss(fl)); if (fl === QUEEN_FLOOR) $('capMsg').textContent = '✴ ' + T('towerNext').replace('{n}', fl).replace('{a}', S.lang === 'vi' ? QUEEN.vi : QUEEN.en) + ' · ' + T('qPassive'); else $('capMsg').textContent = (fl >= TOWER_NEW_FROM && fl <= HELL_TO ? '🔥 ' : '🗼 ') + T('towerNext').replace('{n}', fl).replace('{a}', towerAffixes(fl, Date.now()).map(a => a.ico + ' ' + a[S.lang]).join(' · ')) + (bp ? ' · 😈 ' + bp.pas.map(id => PASSIVES[id].ico).join('') + ' ' + ROMAN(bp.rank) : ''); }
     else $('capMsg').textContent = T('capReached');
     const tg = scene === 'world' ? nearTarget() : null;
     $('gateBtn').style.display = tg ? 'block' : 'none';
-    if (tg) { const lbl = tg.kind === 'boss' ? '獄 ' + T('gateHint') : tg.kind === 'xeno' ? `🛸 ${T('xenoChallenge')} · ${XENO_BOSSES[tg.i][S.lang]}` : tg.kind === 'sanct' ? (sanctNM() ? `👁 ${T('sanctEnter')} · ${nmBoss(tg.sym)[S.lang]} · ${ROMAN(nmTier(S, tg.sym.id) + 1)}` : `⛩ ${T('sanctEnter')} · ${(sanctCursed() ? symbolBoss(tg.sym, 1) : tg.sym)[S.lang]}`) : tg.kind === 'mirror' ? `🪞 ${T('enterMirror')} · ${T('mirrorChance').replace('{p}', Math.round(mirrorChance(S)*100))}` : tg.kind === 'roam' ? `☠ ${T('challengeRoam')} · ${S.lang === 'vi' ? tg.r.B.vi : tg.r.B.en}` : `⛩ ${T('enterRift')} · ${RIFT_RANKS[RIFTS[tg.i][2]][S.lang]}`; if ($('gateBtn').textContent !== lbl) $('gateBtn').textContent = lbl;
-      $('gateBtn').style.borderColor = tg.kind === 'boss' || tg.kind === 'mirror' ? '#ff5060' : tg.kind === 'xeno' ? '#40f0ff' : tg.kind === 'roam' ? '#b060ff' : tg.kind === 'sanct' ? (sanctNM() ? '#ff1020' : sanctCursed() ? '#ff2a60' : '#ffd040') : RIFT_RANKS[RIFTS[tg.i][2]].c; }
+    if (tg) { const hgB = tg.kind === 'hg' || tg.kind === 'hgLock' ? HELL_GATE.guards[tg.i].B() : null;
+      const lbl = hgB ? (tg.kind === 'hg' ? '☠ ' : '🔒 ') + `${T('hgChallenge')} · ${hgB[S.lang]}` : tg.kind === 'hgDoor' ? '🔥 ' + T('hgName') : tg.kind === 'boss' ? '獄 ' + T('gateHint') : tg.kind === 'xeno' ? `🛸 ${T('xenoChallenge')} · ${XENO_BOSSES[tg.i][S.lang]}` : tg.kind === 'sanct' ? (sanctNM() ? `👁 ${T('sanctEnter')} · ${nmBoss(tg.sym)[S.lang]} · ${ROMAN(nmTier(S, tg.sym.id) + 1)}` : `⛩ ${T('sanctEnter')} · ${(sanctCursed() ? symbolBoss(tg.sym, 1) : tg.sym)[S.lang]}`) : tg.kind === 'mirror' ? `🪞 ${T('enterMirror')} · ${T('mirrorChance').replace('{p}', Math.round(mirrorChance(S)*100))}` : tg.kind === 'roam' ? `☠ ${T('challengeRoam')} · ${S.lang === 'vi' ? tg.r.B.vi : tg.r.B.en}` : `⛩ ${T('enterRift')} · ${RIFT_RANKS[RIFTS[tg.i][2]][S.lang]}`; if ($('gateBtn').textContent !== lbl) $('gateBtn').textContent = lbl;
+      $('gateBtn').style.borderColor = hgB || tg.kind === 'hgDoor' ? '#ff3020' : tg.kind === 'boss' || tg.kind === 'mirror' ? '#ff5060' : tg.kind === 'xeno' ? '#40f0ff' : tg.kind === 'roam' ? '#b060ff' : tg.kind === 'sanct' ? (sanctNM() ? '#ff1020' : sanctCursed() ? '#ff2a60' : '#ffd040') : RIFT_RANKS[RIFTS[tg.i][2]].c; }
   }
 
   let lbTab = 'room';
@@ -326,7 +327,7 @@
   }
   $('btnWardrobe').onclick = openWardrobe;
   // ---------------- v1.8 Bestiary ----------------
-  const WHERE = { sanct: 'whereSanct', gate: 'whereGate', tower: 'whereTower', rift: 'whereRift', roam: 'whereRoam', mirror: 'whereMirror', final: 'whereFinal' };
+  const WHERE = { hg: 'whereHG', sanct: 'whereSanct', gate: 'whereGate', tower: 'whereTower', rift: 'whereRift', roam: 'whereRoam', mirror: 'whereMirror', final: 'whereFinal' };
   function drawBossThumb(c, B, t){ const x = c.getContext('2d'), W_ = c.width, H_ = c.height; x.fillStyle = '#0a0710'; x.fillRect(0, 0, W_, H_);
     if (B.id === 'mirrorself' || B.id === 'finalmirror') { R.character(x, W_/2, H_ - 14, H_/130, { t: B.id === 'finalmirror' ? MAX_TITLE : S.t, sk: S.sk, face: -1, fx: {}, mirror: true, seed: 3 }, t); return; }
     const sz = H_*0.72; x.save(); R.bossAura(x, W_/2, H_ - 10, sz, t, 4, 0); x.restore(); R.boss(x, B.id, W_/2, H_ - 10, sz, t, { hue: B.hue, hurt: 0, atk: 0, g: 100, target: [-200, -40], fx: {} }); }
@@ -424,10 +425,15 @@
 
   // ---------------- Interact / Gate ----------------
   const riftReady = i => Date.now() >= ((S.riftCD || {})[i] || 0);
-  function towerPaused(){ return S.t >= MAX_TITLE && towerFloor(S.t) > TOWER_CAP; } // v2.4: sealed after the Empress
+  function towerPaused(){ return S.t >= MAX_TITLE && towerFloor(S.t) > TOWER_CAP && !!S.queenDown; } // v2.4: sealed after the Empress
+  function queenOwed(){ return S.t >= MAX_TITLE && towerFloor(S.t) > QUEEN_FLOOR && !S.queenDown; } // v2.4.1: climbed past 125 before v2.4 → the Empress still blocks the gate (no rollback)
+  const hgDown = i => !!(S.hg || [])[i];
   function nearTarget(){
     if (capped() && !towerPaused() && Math.hypot(me.x - GATE.x, me.y - GATE.y) < 170) return { kind: 'boss' };
     if (Date.now() >= (S.mirrorCD || 0) && Math.hypot(me.x - MIRROR_GATE.x, me.y - MIRROR_GATE.y) < 130) return { kind: 'mirror' };
+    if (S.best >= MAX_TITLE) { const hg = HELL_GATE; // v2.5 Quỷ Môn Quan
+      for (let i = 0; i < hg.guards.length; i++) { const q = hg.guards[i]; if (hgDown(i)) continue; if (Math.hypot(me.x - hg.x - q.dx, me.y - hg.y - q.dy) < 160) return S.queenDown ? (Date.now() >= ((S.hgcd || {})[i] || 0) ? { kind: 'hg', i } : null) : { kind: 'hgLock', i }; }
+      if (S.hgOpen && Math.hypot(me.x - hg.x, me.y - hg.y) < 200) return { kind: 'hgDoor' }; }
     if (S.best >= MAX_TITLE && !S.xenoOpen && Math.hypot(me.x - XENO.gate[0], me.y - XENO.gate[1]) < 160 && xenoReady(0)) return { kind: 'xeno', i: 0 };
     if (onXeno()) for (const w of ['core', 'spire']) { const [ax, ay] = xenoAbs(XENO_SPOTS[w]); if (Math.hypot(me.x - ax, me.y - ay) < 170) { const i = xenoTargetIdx(w); if (i >= 0 && xenoReady(i)) return { kind: 'xeno', i }; } }
     if (S.sanctOpen && S.best >= SANCTUM.unlockTitle) for (const sym of SYMBOLS) { if (Math.hypot(me.x - SANCTUM.x - sym.dx, me.y - SANCTUM.y - sym.dy) < (sym.center ? 150 : 120)) { const st = sanctState(sym); if (st === 'ready') return { kind: 'sanct', sym }; } }
@@ -439,6 +445,7 @@
   function interact(){
     if (scene !== 'world') return;
     const tg = nearTarget(); if (!tg) return;
+    if (tg.kind === 'hg') return startHG(tg.i); if (tg.kind === 'hgLock') return toast('🔒 ' + T('hgLocked'), 4000); if (tg.kind === 'hgDoor') return toast(T('hgSoon'), 4000);
     if (tg.kind === 'boss') startBoss(); else if (tg.kind === 'xeno') startXeno(tg.i); else if (tg.kind === 'sanct') startSanct(tg.sym); else if (tg.kind === 'mirror') startMirror(); else if (tg.kind === 'roam') startRoam(tg.r); else startRift(tg.i);
   }
   $('gateBtn').onclick = interact;
@@ -465,11 +472,11 @@
   const bossName = (B, fi) => `${S.lang === 'vi' ? B.vi : B.en} · ${BOSS_FORMS[fi][S.lang]}`;
   function startBoss(){ const g = S.t;
     if (g >= MAX_TITLE) { // v1.8 GodK Tower
-      const fl = towerFloor(g), B = towerBoss(fl), aff = towerAffixes(fl, Date.now()), ids = aff.map(a => a.id), st = Object.assign({}, F.boss(g)), guardian = fl % 10 === 0;
+      const owed = queenOwed(), fl = owed ? QUEEN_FLOOR : towerFloor(g), B = towerBoss(fl), aff = towerAffixes(fl, Date.now()), ids = aff.map(a => a.id), st = Object.assign({}, F.boss(g)), guardian = fl % 10 === 0;
       if (guardian) { st.hp *= 1.3; st.atk *= 1.15; }
       if (fl >= TOWER_NEW_FROM) { st.hp *= TOWER_HELL_M; st.atk *= TOWER_HELL_M; st.def *= TOWER_HELL_M; } // v2.3: talents era
-      if (B.queen) { st.hp *= QUEEN_CFG.mult; st.atk *= QUEEN_CFG.mult; st.def *= QUEEN_CFG.mult; ids.length = 0; } // v2.4: no weekly affixes — only her own law
-      beginBossFight({ kind: 'boss', g, B, st, form: towerForm(fl), jump: 1, bp: B.queen ? null : towerBossPas(fl, B), queen: !!B.queen, tower: { fl, aff: ids, guardian, hell: !!B.hell, name: towerBossName(B, fl, S.lang) } }); return; }
+      if (B.queen) { const qm = owed ? QUEEN_CFG.multPast : QUEEN_CFG.mult; st.hp *= qm; st.atk *= qm; st.def *= qm; ids.length = 0; } // v2.4: no weekly affixes — only her own law
+      beginBossFight({ kind: 'boss', g, B, st, form: towerForm(fl), jump: 1, bp: B.queen ? null : towerBossPas(fl, B), queen: !!B.queen, tower: { fl, owed, aff: ids, guardian, hell: !!B.hell, name: towerBossName(B, fl, S.lang) } }); return; }
     beginBossFight({ kind: 'boss', g, B: bossFor(g), st: F.boss(g), form: bossForm(g), jump: isRealmEnd(g) ? 2 : 1 }); }
   function startRift(i){
     const RK = RIFT_RANKS[RIFTS[i][2]], g = S.t, b = F.boss(g), pool = unlockedBosses(g);
@@ -618,10 +625,16 @@
   function finishFight(){
     const f = fight; fight = null; scene = 'world'; $('hud').classList.remove('dim'); $('fightUI').style.display = 'none'; $('fightHelp').style.display = 'none';
     if (f.kind === 'boss') { me.x = GATE.x; me.y = GATE.y + 200; if (f.result) { S.stats.bossWins = (S.stats.bossWins || 0) + 1;
-      if (f.B.queen) { const first = !S.queenDown; S.queenDown = 1; S.petUnlock = 1; titleUp(true); if (first) setTimeout(() => { sfx.title(); flash('#fff8d8', 1.2);
+      if (f.B.queen) { const first = !S.queenDown; S.queenDown = 1; S.petUnlock = 1; if (f.tower && f.tower.owed) save(); else titleUp(true); if (first) setTimeout(() => { sfx.title(); flash('#fff8d8', 1.2);
         modal(`<h2 style="color:#ffe9a8">✴ ${T('qDownT')} ✴</h2><p class="muted"><i>${esc(T('qQuote'))}</i></p><p style="white-space:pre-line">${esc(T('qDown'))}</p><div class="row"><button class="btn gold" data-close>OK</button></div>`); }, 1200); return; }
       if (f.B.id === 'finalmirror') { S.stats.finalWins = (S.stats.finalWins || 0) + 1; const first = !S.ended; S.ended = true; save(); if (first) { playEnding(() => titleUp(true)); return; } }
       titleUp(true); } }
+    else if (f.kind === 'hg') { const i = f.riftI, q = HELL_GATE.guards[i]; me.x = HELL_GATE.x + q.dx; me.y = HELL_GATE.y + q.dy - 200;
+      if (f.result) { S.hg = S.hg || [0, 0]; S.hg[i] = 1; sfx.title(); toast('☠ ' + T('hgFirst').replace('{n}', f.B[S.lang]) + (S.hg.every(x => x) ? '' : ' ' + T('hgOneLeft')), 6000);
+        if (S.hg.every(x => x) && !S.hgOpen) { S.hgOpen = 1; setTimeout(() => { flash('#ff2010', 1); sfx.transform(); bigBanner('🔥', T('hgOpenT'), '#ff5030');
+          modal(`<h2 style="color:#ff6040">☠ ${T('hgOpenT')} ☠</h2><p style="white-space:pre-line">${esc(T('hgOpen'))}</p><div class="row"><button class="btn red" data-close>OK</button></div>`); }, 1000); } }
+      else { S.hgcd = S.hgcd || {}; S.hgcd[i] = Date.now() + HELL_GATE.cdLose; }
+      save(); }
     else if (f.kind === 'xeno') { const i = f.riftI, B = XENO_BOSSES[i]; S.xcd = S.xcd || {}; S.xcd[i] = Date.now() + (f.result ? XENO_CD_WIN : XENO_CD_LOSE);
       if (B.at === 'gate') { me.x = XENO.gate[0]; me.y = XENO.gate[1] + 170; } else { const [ax, ay] = xenoAbs(XENO_SPOTS[B.at]); me.x = ax; me.y = ay + 200; }
       if (f.result && (S.xs || 0) === i) { S.xs = i + 1; const rw = xenoRewardText(B.reward); sfx.title(); flash('#40f0ff', 0.8);
@@ -735,6 +748,11 @@
   const xenoReady = i => Date.now() >= ((S.xcd || {})[i] || 0);
   function xenoRewardText(r){ if (r === 'open') return T('xenoOpen'); if (r === 'slot') return '✦ ' + T('xenoSlot'); if (r === 'aura') return '🎭 ' + byId(AURA_SKINS, 'xenoaura')[S.lang] + ' · ' + byId(NICKS, 'visitor')[S.lang];
     const P = PASSIVES[r]; return P ? T('nmUnlockPas').replace('{n}', P.ico + ' ' + P[S.lang]) : ''; }
+  function startHG(i){ // v2.5 Ghost Gate guardian — as hard as the Empress, scaled to the player's floor
+    const q = HELL_GATE.guards[i], B = q.B(), g = Math.max(S.t, MAX_TITLE - 1 + QUEEN_FLOOR), m = q.mult*TOWER_HELL_M*(hellPast(g) ? QUEEN_CFG.multPast/QUEEN_CFG.mult : 1);
+    const st = Object.assign({}, F.boss(g)); st.hp *= m; st.atk *= m; st.def *= m;
+    beginBossFight({ kind: 'hg', i, g: S.t, B, st, form: 12, jump: 1, bp: { pas: B.pas.slice(), prank: Object.fromEntries(B.pas.map(k => [k, PASSIVE_RANK_MAX])) } });
+    fight.Rt.name = `${T('hgGuard')} · ${B[S.lang]}`; fight.intro = [`☠ ${T('hgName')}`].concat(fight.intro); }
   function startXeno(i){ const B = XENO_BOSSES[i], st = F.boss(B.ref);
     beginBossFight({ kind: 'xeno', i, g: S.t, mechG: B.ref, B, st, form: 11, jump: 1 }); }
   function canStand(x, y){
@@ -830,6 +848,13 @@
         list.push({ y, f: () => { const [sx, sy] = w2s(x, y), st = sanctState(sym), B = sanctBossOf(sym), key = cur === 2 ? 'nm_' + sym.id : B.id, nk = nmTier(S, sym.id) + 1;
           const sub = cur === 2 && st === 'locked' ? T('nmDragonLocked').replace('{n}', ROMAN(nk)) : st === 'locked' ? (S.best < SANCTUM.unlockTitle ? T('sanctLocked') : T('sanctDragonLocked')) : st === 'cd' ? T('sanctCD').replace('{t}', mmss(S.sanctCD[key] - Date.now())) : (cur === 2 ? '👁 ' + T('nmTier').replace('{n}', ROMAN(nk)) + ' · ' : '') + (B.trait ? TRAITS[B.trait].ico + ' ' + TRAITS[B.trait][S.lang] + ' · ' : '') + ['☠☠☠', '☠☠', '☠', '✓'][sanctThreat(sym)] + ' ' + T('threat')[sanctThreat(sym)];
           R.sanctumPedestal(ctx, sx, sy, cam.z, time, sym.id, st === 'cd' && cur !== 2 && S.sanct[key] ? 'done' : st, B[S.lang], sub, cur); } }); } }
+    if (S.best >= MAX_TITLE && vis(HELL_GATE.x, HELL_GATE.y, 700)) { const hg = HELL_GATE; // v2.5 Quỷ Môn Quan + its two skull-aura guardians
+      list.push({ y: hg.y - 60, f: () => { const [sx, sy] = w2s(hg.x, hg.y); R.hellGate(ctx, sx, sy, cam.z, time, !!S.hgOpen, `☠ ${T('hgName')}`, S.hgOpen ? T('hgSoon') : S.queenDown ? T('hgSub') : T('hgLocked')); } });
+      hg.guards.forEach((q, i) => { if (hgDown(i)) return; const B = q.B(), x = hg.x + q.dx, y = hg.y + q.dy; list.push({ y, f: () => { const [sx, sy] = w2s(x, y), sz = 135*cam.z;
+        R.skullAura(ctx, sx, sy, sz, time + i*1.7, i ? 130 : 0); ctx.save(); ctx.translate(sx, sy); if (q.dx > 0) ctx.scale(-1, 1);
+        R.boss(ctx, B.id, 0, 0, sz, time + i*3, { hue: B.hue, hurt: 0, atk: 0, g: S.t, target: [-300, -50], fx: {} }); ctx.restore();
+        const cd = ((S.hgcd || {})[i] || 0) - Date.now(); ctx.textAlign = 'center'; ctx.font = `700 ${Math.max(10, 12*cam.z)}px ${FONT}`; ctx.fillStyle = '#ff8070'; ctx.shadowColor = '#000'; ctx.shadowBlur = 5;
+        ctx.fillText(`☠ ${B[S.lang]}${cd > 0 ? ' · ' + mmss(cd) : ''}`, sx, sy + 26*cam.z); ctx.shadowBlur = 0; } }); }); }
     if (vis(MIRROR_GATE.x, MIRROR_GATE.y, 300)) list.push({ y: MIRROR_GATE.y, f: () => { const [sx, sy] = w2s(MIRROR_GATE.x, MIRROR_GATE.y); const rd = Date.now() >= (S.mirrorCD || 0);
       R.mirrorGate(ctx, sx, sy, cam.z, time, rd, `🪞 ${T('mirrorGate')}`, rd ? T('mirrorChance').replace('{p}', Math.round(mirrorChance(S)*100)) : T('mirrorCD').replace('{t}', mmss(S.mirrorCD - Date.now())), mirrorCh); } });
     const evw = eventAt(Date.now()); if (evw.active && vis(evw.x, evw.y, 500)) list.push({ y: evw.y, f: () => { const [sx, sy] = w2s(evw.x, evw.y); R.eventGate(ctx, sx, sy, cam.z, time, evw, evw.type[S.lang], S.buffEv === evw.idx); } });
@@ -867,6 +892,7 @@
     S.wells.forEach(i => { const [a, b] = p(...WELLS[i]); mctx.fillStyle = '#6fe'; mctx.beginPath(); mctx.arc(a, b, 3, 0, 7); mctx.fill(); });
     S.stelae.forEach(i => { const [a, b] = p(...STELAE[i]); mctx.fillStyle = '#ca6'; mctx.fillRect(a - 1.5, b - 1.5, 3, 3); });
     if (S.sanctSeen) { const [a, b] = p(SANCTUM.gate[0], SANCTUM.gate[1]); mctx.fillStyle = sanctCursed() ? '#ff2a60' : '#ffd040'; mctx.font = 'bold 10px serif'; mctx.textAlign = 'center'; mctx.fillText('⛩', a, b + 4); }
+    if (S.best >= MAX_TITLE) { const [a, b] = p(HELL_GATE.x, HELL_GATE.y); mctx.fillStyle = S.hgOpen ? '#ff3020' : '#a02020'; mctx.font = '9px sans-serif'; mctx.textAlign = 'center'; mctx.fillText('☠', a, b + 3); }
     { const [a, b] = p(MIRROR_GATE.x, MIRROR_GATE.y); mctx.fillStyle = Date.now() >= (S.mirrorCD || 0) ? '#ff6a80' : '#555'; mctx.beginPath(); mctx.ellipse(a, b, 2.5, 4, 0, 0, 7); mctx.fill(); }
     (S.riftSeen || []).forEach(i => { const [a, b] = p(RIFTS[i][0], RIFTS[i][1]); mctx.fillStyle = riftReady(i) ? RIFT_RANKS[RIFTS[i][2]].c : '#555'; mctx.save(); mctx.translate(a, b); mctx.rotate(Math.PI/4); mctx.fillRect(-3, -3, 6, 6); mctx.restore(); });
     { const pool = unlockedBosses(S.t), now = Date.now(); for (let i = 0; i < ROAMERS.length; i++) { const r = roamerAt(i, now, pool); if (now < ((S.roamCD || {})[i] || 0) || Math.hypot(r.x - me.x, r.y - me.y) > 1400) continue;
@@ -915,6 +941,7 @@
       if (f.kind === 'mirror') { R.character(ctx, rx + lunge*0.5, floorY, sc*1.3, { t: S.t, sk: S.sk, as: S.as, face: -1, fx: f.Rt.fx, mirror: true, seed: 7, moving: false }, time); } else {
       ctx.save(); ctx.globalAlpha *= 1; R.bossAura(ctx, rx + lunge, floorY, S_, time, f.form, Math.max(f.aBoost, f.towerBoost || 0)); ctx.restore();
       if (f.q) Object.assign(f.Rt.fx, { qs: f.q.shield/f.q.shieldMax, qe: f.q.enr ? 1 : 0, qr: f.q.rev ? 1 : 0 });
+      if (f.kind === 'hg') R.skullAura(ctx, rx + lunge, floorY, S_, time, f.riftI ? 130 : 0); // v2.5 skull aura in the fight too
       R.boss(ctx, f.B.id, rx + lunge, floorY, S_, time, { hue: f.hue, hurt: f.Rt.hurt, atk: f.Rt.atk, g: f.g, target: [lx - rx, -S_*0.3], fx: f.Rt.fx }); }
       ctx.globalAlpha = 1;
       if (f.Rt.hurt > 0) burn(rx, floorY - S_*0.5, S_*0.3);
